@@ -1,233 +1,125 @@
-// js/profile.js
+// Frontend/js/profile.js — uses REST API for profile (auth via Supabase)
+import { supabase } from "./supabaseClient.js";
+import { api } from "./api.js";
 
-const token = localStorage.getItem('authToken');
-let user = JSON.parse(localStorage.getItem('lavitur_user'));
+const DEFAULT_PROFILE_PIC = "images/icons/default-avatar.png";
 
-if (!token || !user) {
-  window.location.href = 'login.html';
-}
-
-function obfuscateEmail(email) {
-  const [u, d] = email.split('@');
-  const half = Math.floor(u.length / 2);
-  return u.slice(0, half) + '***@' + d;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  // Fill editable fields
-  document.getElementById('username').value = user.username || '';
-  document.getElementById('fullName').value = user.fullName || '';
-  document.getElementById('email').value = user.email || '';
-
-  // Profile picture
-  const storedPic = localStorage.getItem('profilePicture');
-  if (storedPic) {
-    document.getElementById('profile-picture').src = storedPic;
+async function requireSession() {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  const session = data?.session || null;
+  if (!session) {
+    window.location.replace("login.html");
+    return null;
   }
+  return session;
+}
 
-  document.getElementById('change-picture-btn').addEventListener('click', () => {
-    document.getElementById('upload-profile-picture').click();
-  });
+function setInputValue(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.value = value ?? "";
+}
 
-  document.getElementById('upload-profile-picture').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const imgData = e.target.result;
-        document.getElementById('profile-picture').src = imgData;
-        localStorage.setItem('profilePicture', imgData);
-      };
-      reader.readAsDataURL(file);
-    }
-  });
+function setDisabled(id, disabled) {
+  const el = document.getElementById(id);
+  if (el) el.disabled = disabled;
+}
 
-  // Sidebar nav
-  const buttons = document.querySelectorAll('.nav-btn');
-  const sections = document.querySelectorAll('.profile-section');
+function wireSidebarNav() {
+  const buttons = document.querySelectorAll(".nav-btn");
+  const sections = document.querySelectorAll(".profile-section");
+  if (!buttons.length || !sections.length) return;
 
-  buttons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      buttons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      buttons.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
       const target = btn.dataset.section;
-      sections.forEach(sec => {
-        sec.classList.remove('active');
-        if (sec.id === 'section-' + target) {
-          sec.classList.add('active');
-        }
+      sections.forEach((sec) => {
+        sec.classList.remove("active");
+        if (sec.id === "section-" + target) sec.classList.add("active");
       });
     });
   });
+}
 
-  // Edit/save user data
+function wireProfilePicture(userId) {
+  const img = document.getElementById("profile-picture");
+  const changeBtn = document.getElementById("change-picture-btn");
+  const fileInput = document.getElementById("upload-profile-picture");
+  if (!img) return;
+
+  const PIC_KEY = `profilePicture:${userId}`;
+  img.src = localStorage.getItem(PIC_KEY) || DEFAULT_PROFILE_PIC;
+  img.alt = "Profile picture";
+  changeBtn?.addEventListener("click", () => fileInput?.click());
+  fileInput?.addEventListener("change", (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      img.src = ev.target.result;
+      localStorage.setItem(PIC_KEY, ev.target.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function wireEditSave(userId, initialProfile) {
+  const editBtn = document.getElementById("edit-profile-btn");
+  const usernameEl = document.getElementById("username");
+  const emailEl = document.getElementById("email");
+  const fullNameEl = document.getElementById("fullName");
+  if (emailEl) emailEl.disabled = true;
   let isEditing = false;
-  const editBtn = document.getElementById('edit-profile-btn');
-  const usernameInput = document.getElementById('username');
-  const fullNameInput = document.getElementById('fullName');
-  const emailInput = document.getElementById('email');
+  if (usernameEl) usernameEl.disabled = true;
+  if (fullNameEl) fullNameEl.disabled = true;
 
-  editBtn.addEventListener('click', () => {
+  editBtn?.addEventListener("click", async () => {
     isEditing = !isEditing;
-
-    usernameInput.disabled = !isEditing;
-    fullNameInput.disabled = !isEditing;
-    emailInput.disabled = !isEditing;
-    editBtn.textContent = isEditing ? 'Save' : 'Edit';
+    if (usernameEl) usernameEl.disabled = !isEditing;
+    if (fullNameEl) fullNameEl.disabled = !isEditing;
+    editBtn.textContent = isEditing ? "Save" : "Edit";
 
     if (!isEditing) {
-      // Save data
-      user.username = usernameInput.value.trim();
-      user.fullName = fullNameInput.value.trim();
-      user.email = emailInput.value.trim();
-
-      localStorage.setItem('lavitur_user', JSON.stringify(user));
+      const newUsername = (usernameEl?.value || "").trim();
+      const newFullName = (fullNameEl?.value || "").trim();
+      const usernameRegex = /^[a-zA-Z0-9._]+$/;
+      if (!newUsername || !usernameRegex.test(newUsername)) {
+        alert("Invalid username. Use letters, numbers, dots, and underscores.");
+        if (usernameEl) usernameEl.value = initialProfile.username || "";
+        if (fullNameEl) fullNameEl.value = initialProfile.full_name || "";
+        return;
+      }
+      try {
+        await api.patch("/me", { username: newUsername, full_name: newFullName });
+        initialProfile.username = newUsername;
+        initialProfile.full_name = newFullName;
+      } catch (err) {
+        alert(err?.data?.error || err?.message || "Failed to update profile.");
+        if (usernameEl) usernameEl.value = initialProfile.username || "";
+        if (fullNameEl) fullNameEl.value = initialProfile.full_name || "";
+      }
     }
   });
+}
 
-  // Populate other sections
-  populateOrders();
-  populateWishlist();
-  populateAddresses();
-  populateActivity();
-  populateLoyalty();
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const session = await requireSession();
+    if (!session) return;
+
+    const profile = await api.get("/me");
+    setInputValue("username", profile.username || "");
+    setInputValue("email", profile.email || "");
+    setInputValue("fullName", profile.full_name || "");
+    setDisabled("fullName", true);
+
+    wireProfilePicture(session.user.id);
+    wireSidebarNav();
+    wireEditSave(session.user.id, profile);
+  } catch (e) {
+    console.error("Profile page failed:", e);
+    window.location.replace("login.html");
+  }
 });
-
-// Load Order History
-function loadOrderHistory() {
-  const ordersList = document.getElementById('orders-list');
-  const orders = JSON.parse(localStorage.getItem('lavitur_orders')) || [];
-
-  if (!orders.length) {
-    ordersList.innerHTML += `<p style="margin-top:1rem;">You have no orders yet.</p>`;
-    return;
-  }
-
-  orders.forEach(order => {
-    const row = document.createElement('div');
-    row.classList.add('order-row');
-    row.innerHTML = `
-      <div>${order.id}</div>
-      <div>${order.date}</div>
-      <div>${order.status}</div>
-      <div>€${order.total.toFixed(2)}</div>
-      <div><button class="order-action-btn">View</button></div>
-    `;
-
-    const itemDetails = document.createElement('div');
-    itemDetails.classList.add('order-items');
-    itemDetails.innerHTML = order.items.map(item => `
-      <div class="order-item">
-        <img src="${item.image || 'images/default-product.png'}" alt="${item.name}" />
-        <div class="order-item-details">
-          <span><strong>${item.name}</strong></span>
-          <span>${item.quantity} × €${item.price.toFixed(2)}</span>
-        </div>
-      </div>
-    `).join('');
-
-    row.addEventListener('click', () => {
-      row.classList.toggle('expanded');
-    });
-
-    ordersList.appendChild(row);
-    ordersList.appendChild(itemDetails);
-  });
-}
-
-// Load Wishlist
-function loadWishlist() {
-  const container = document.getElementById('wishlist-list');
-  if (mockWishlist.length === 0) {
-    container.innerHTML = '<p>Wishlist is empty.</p>';
-    return;
-  }
-
-  container.innerHTML = mockWishlist.map(product => `
-    <div class="product-card">
-      <img src="${product.image}" alt="${product.name}">
-      <div class="product-details">
-        <h4>${product.name}</h4>
-        <p>Size: ${product.size}</p>
-        <p>€${product.price.toFixed(2)}</p>
-        <span class="status ${product.inStock ? 'in-stock' : 'out-stock'}">
-          ${product.inStock ? 'In Stock' : 'Out of Stock'}
-        </span>
-      </div>
-    </div>
-  `).join('');
-}
-
-function populateAddresses() {
-  document.getElementById('addresses-list').innerHTML = `<ul>
-    <li>123 Lavitúr St, New York, NY 10001</li>
-    <li>47 Rue de Lavitúr, Paris, France 75001</li>
-  </ul>`;
-}
-
-function populateActivity() {
-  document.getElementById('activity-list').innerHTML = `<ul>
-    <li>Logged in on May 29, 2025 from IP 192.168.1.23</li>
-    <li>Added "Signature Beanie" to Wishlist</li>
-    <li>Placed Order #10342</li>
-  </ul>`;
-}
-
-function populateLoyalty() {
-  document.getElementById('loyalty-info').innerHTML = `
-    <p><strong>Points:</strong> 1,450</p>
-    <p><strong>Tier:</strong> Gold</p>
-    <p>You’re 550 points away from Platinum.</p>
-  `;
-}
-// Simulated API responses (replace with actual fetch later)
-const mockOrders = [
-  {
-    orderId: 'LV-84392',
-    date: '2025-05-28',
-    products: [
-      {
-        name: 'Obsidian Trench Coat',
-        size: 'M',
-        price: 340.00,
-        image: 'images/products/coat1.jpg',
-        stockStatus: 'Delivered'
-      },
-      {
-        name: 'Urban Shift Sneakers',
-        size: '42',
-        price: 170.00,
-        image: 'images/products/sneakers1.jpg',
-        stockStatus: 'Delivered'
-      }
-    ]
-  }
-];
-
-const mockWishlist = [
-  {
-    name: 'Nocturne Cargo Jacket',
-    size: 'L',
-    price: 325.00,
-    image: 'images/products/jacket1.jpg',
-    inStock: true
-  },
-  {
-    name: 'Midnight Flux Trousers',
-    size: 'M',
-    price: 210.00,
-    image: 'images/products/trousers1.jpg',
-    inStock: false
-  }
-];
-
-
-
-
-loadOrderHistory();
-
-
-
-
-loadOrders();
-loadWishlist();

@@ -69,7 +69,7 @@ export const updateUserRole = (req, res) => {
   const validRoles = [
     'admin',
     'representative',
-    'senior',
+    'senior employee',
     'employee',
     'ambassador',
     'customer'

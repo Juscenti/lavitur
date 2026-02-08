@@ -1,17 +1,13 @@
-<script type="module">
-  import { requireAdminAuth } from '../js/auth.js';
-  requireAdminAuth();
-</script>
-<meta http-equiv="Cache-Control" content="no-store" />
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-store" />
   <title>Admin Products – Lavitúr</title>
   <link rel="stylesheet" href="../css/product.css">
+  <link rel="stylesheet" href="../css/productmodal.css">
 </head>
+
 <body>
   <header>
     <h1>Product Management</h1>
@@ -22,6 +18,7 @@
   </header>
 
   <main>
+    
     <!-- Viewer Mode -->
     <section id="viewerModeSection">
       <table>
@@ -41,6 +38,7 @@
       </table>
     </section>
 
+
     <!-- Editorial Mode -->
     <section id="editorialModeSection" class="hidden">
       <div class="editorial-header">
@@ -50,24 +48,90 @@
 
       <div id="categoryContainer">
         <!-- JS generates category blocks here -->
-        <!-- Example structure below -->
-
-        <!--
-        <div class="category-block" data-category="Outerwear">
-          <div class="category-header">
-            <h3>Outerwear</h3>
-            <button class="addInCategoryBtn">+ Add Product</button>
-          </div>
-          <div class="product-grid">
-            <div class="product-card"> ... </div>
-            ...
-          </div>
-        </div>
-        -->
       </div>
     </section>
   </main>
 
-  <script src="../js/products.js" type="module"></script>
+  <!-- Product Form Modal (keep OUTSIDE categoryContainer) -->
+  <div id="productFormModal" class="pmodal hidden">
+  <div class="pmodal__overlay" id="productModalOverlay"></div>
+
+  <div class="pmodal__dialog" role="dialog" aria-modal="true" aria-labelledby="productFormTitle">
+    <div class="pmodal__header">
+      <h2 id="productFormTitle">Add Product</h2>
+      <button type="button" class="pmodal__iconbtn" id="cancelProductFormBtn" aria-label="Close">
+        ✕
+      </button>
+    </div>
+
+    <div class="pmodal__body">
+      <!-- LEFT: FORM -->
+      <form id="productForm" class="pmodal__left">
+        <div class="pfield">
+          <label for="title">Name</label>
+          <input id="title" name="title" type="text" placeholder="Product name" />
+        </div>
+
+        <div class="pfield">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" rows="5" placeholder="Short product description"></textarea>
+        </div>
+
+        <div class="pgrid2">
+          <div class="pfield">
+            <label for="price">Price (JMD)</label>
+            <input id="price" name="price" type="number" min="0" step="0.01" placeholder="0.00" />
+          </div>
+
+          <div class="pfield">
+            <label for="stock">Stock</label>
+            <input id="stock" name="stock" type="number" min="0" step="1" placeholder="0" />
+          </div>
+        </div>
+
+        <div class="pfield">
+          <label for="productCategorySelect">Category</label>
+          <select id="productCategorySelect" name="categoryName"></select>
+        </div>
+
+        <div class="pmodal__footer">
+          <button type="button" class="pbtn pbtn--ghost" id="cancelProductFormBtnBottom">Cancel</button>
+          <button type="submit" class="pbtn pbtn--primary">Save</button>
+        </div>
+      </form>
+
+      <!-- RIGHT: MEDIA -->
+      <aside class="pmodal__right">
+        <div class="pmedia">
+          <div class="pmedia__header">
+            <div>
+              <div class="pmedia__title">Product Media</div>
+              <div class="pmedia__sub">Upload images/videos for this product.</div>
+            </div>
+          </div>
+
+          <!-- Upload box -->
+          <label class="pupload">
+            <input id="productMediaInput" type="file" accept="image/*,video/mp4" multiple />
+            <div class="pupload__box">
+              <div class="pupload__icon">⬆</div>
+              <div class="pupload__text">
+                <div class="pupload__headline">Drop files here or click to upload</div>
+                <div class="pupload__meta">PNG, JPG, MP4</div>
+              </div>
+            </div>
+          </label>
+
+          <!-- Preview grid -->
+          <div id="productMediaGrid" class="media-grid"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+
+  <!-- Page logic -->
+  <script type="module" src="../js/products.js"></script>
 </body>
 </html>

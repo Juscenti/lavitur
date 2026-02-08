@@ -1,0 +1,7 @@
+// Backend/routes/categories.js — public
+import express from 'express';
+import { listCategories } from '../controllers/categoriesController.js';
+
+const router = express.Router();
+router.get('/', listCategories);
+export default router;

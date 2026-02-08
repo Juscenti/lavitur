@@ -1,192 +1,168 @@
-// admin-panel/js/users.js
-import { getAuthHeaders, requireAdminAuth } from './auth.js';
+// admin-panel/js/users.js — uses REST API
+import { api } from "./api.js";
+import { requireStaff } from "./adminGuard.js";
 
-// Gate the page (redirects to login if no token/admin role)
-requireAdminAuth();
+let myProfile = null;
 
-// ---- API base (always hit the backend port 5000) ----
-const ADMIN_API = 'http://localhost:5000/api/admin';
+const tableBody = document.getElementById("userTableBody");
+const searchInput = document.getElementById("userSearchInput");
+const modal = document.getElementById("userModal");
+const closeModalBtn = document.getElementById("closeUserModal");
+const modalDetails = document.getElementById("modalUserDetails");
 
-// ---- DOM refs ----
-const tableBody     = document.getElementById('userTableBody');
-const searchInput   = document.getElementById('userSearchInput');
-const modal         = document.getElementById('userModal');
-const closeModalBtn = document.getElementById('closeUserModal');
-const modalDetails  = document.getElementById('modalUserDetails');
-
-// If any of these are missing, bail early to avoid TypeErrors in dev
 if (!tableBody || !searchInput) {
-  console.warn('users.js: expected table/search elements not found on this page.');
-}
-
-// We’ll read the token the same way auth.js builds headers
-function getToken() {
-  const h = getAuthHeaders();
-  // h.Authorization = "Bearer <token>"
-  return h.Authorization?.split(' ')[1] || null;
+  console.warn("users.js: expected table/search elements not found on this page.");
 }
 
 let userData = [];
 
-// ---------- Render table ----------
 function renderTable(users) {
   if (!tableBody) return;
-  tableBody.innerHTML = '';
+  tableBody.innerHTML = "";
 
   users.forEach((user) => {
-    const row = document.createElement('tr');
+    const row = document.createElement("tr");
     row.innerHTML = `
-      <td>${user.fullName ?? ''}</td>
-      <td>${user.username ?? ''}</td>
-      <td>${user.email ?? ''}</td>
-      <td>${user.role ?? ''}</td>
-      <td class="status-cell">${user.status ?? ''}</td>
-      <td>${user.createdAt ?? ''}</td>
+      <td>${user.fullName ?? ""}</td>
+      <td>${user.username ?? ""}</td>
+      <td>${user.email ?? ""}</td>
+      <td>${user.role ?? ""}</td>
+      <td class="status-cell">${user.status ?? ""}</td>
+      <td>${user.createdAt ?? ""}</td>
       <td>
         <button class="action-btn view">View</button>
-        ${user.role === 'admin' ? '' : `<button class="action-btn suspend">Suspend</button>`}
-        ${user.role === 'admin' ? '' : `<button class="action-btn promote">Promote</button>`}
+        ${user.role === "admin" ? "" : `<button class="action-btn suspend">Suspend</button>`}
+        ${user.role === "admin" ? "" : `<button class="action-btn promote">Promote</button>`}
       </td>
     `;
     tableBody.appendChild(row);
 
-    // ----- Suspend -----
-    const suspendBtn = row.querySelector('.suspend');
+    const suspendBtn = row.querySelector(".suspend");
     if (suspendBtn) {
-      suspendBtn.addEventListener('click', async () => {
+      suspendBtn.addEventListener("click", async () => {
         try {
-          const res = await fetch(`${ADMIN_API}/users/${user.id}/status`, {
-            method: 'PATCH',
-            headers: getAuthHeaders(),
-          });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const result = await res.json();
-          user.status = result.user.status;
-          row.querySelector('.status-cell').textContent = user.status;
+          const newStatus = user.status === "suspended" ? "active" : "suspended";
+          await api.patch(`/admin/users/${user.id}/status`, { status: newStatus });
+          user.status = newStatus;
+          row.querySelector(".status-cell").textContent = user.status;
         } catch (err) {
           console.error(err);
-          alert('Failed to update user status.');
+          alert("Failed to update user status.");
         }
       });
     }
 
-    // ----- View -----
-    const viewBtn = row.querySelector('.view');
+    const viewBtn = row.querySelector(".view");
     if (viewBtn) {
-      viewBtn.addEventListener('click', async () => {
+      viewBtn.addEventListener("click", async () => {
         try {
-          const res = await fetch(`${ADMIN_API}/users/${user.id}`, {
-            headers: getAuthHeaders(),
-          });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const userDetails = await res.json();
-
+          const data = await api.get(`/admin/users/${user.id}`);
           if (modalDetails && modal) {
             modalDetails.innerHTML = `
-              <p><strong>Full Name:</strong> ${userDetails.fullName ?? ''}</p>
-              <p><strong>Username:</strong> ${userDetails.username ?? ''}</p>
-              <p><strong>Email:</strong> ${userDetails.email ?? ''}</p>
-              <p><strong>Role:</strong> ${userDetails.role ?? ''}</p>
-              <p><strong>Status:</strong> ${userDetails.status ?? ''}</p>
-              <p><strong>Joined:</strong> ${userDetails.createdAt ?? ''}</p>
+              <p><strong>Full Name:</strong> ${data.full_name ?? ""}</p>
+              <p><strong>Username:</strong> ${data.username ?? ""}</p>
+              <p><strong>Email:</strong> ${data.email ?? ""}</p>
+              <p><strong>Role:</strong> ${data.role ?? ""}</p>
+              <p><strong>Status:</strong> ${data.status ?? ""}</p>
+              <p><strong>Joined:</strong> ${data.createdAt ?? (data.created_at ? new Date(data.created_at).toLocaleString() : "")}</p>
             `;
-            modal.classList.remove('hidden');
+            modal.classList.remove("hidden");
           }
         } catch (err) {
           console.error(err);
-          alert('Unable to view user.');
+          alert("Unable to view user.");
         }
       });
     }
 
-    // ----- Promote -----
-    const promoteBtn = row.querySelector('.promote');
+    const promoteBtn = row.querySelector(".promote");
     if (promoteBtn) {
-      promoteBtn.addEventListener('click', () => {
-        const dlg = document.getElementById('promoteModal');
+      promoteBtn.addEventListener("click", () => {
+        const dlg = document.getElementById("promoteModal");
         if (!dlg) return;
-        dlg.classList.remove('hidden');
-        document.getElementById('promoteUsernameLabel').textContent =
-          `Change role for: ${user.username}`;
-        document.getElementById('newRoleSelect').value = user.role;
+        dlg.classList.remove("hidden");
+        document.getElementById("promoteUsernameLabel").textContent = `Change role for: ${user.username}`;
+        document.getElementById("newRoleSelect").value = user.role;
 
-        document.getElementById('confirmPromoteBtn').onclick = () => {
-          const selected = document.getElementById('newRoleSelect').value;
+        document.getElementById("confirmPromoteBtn").onclick = async () => {
+          const selected = document.getElementById("newRoleSelect").value;
           if (selected && selected !== user.role) {
-            promoteUser(user.id, selected);
+            await promoteUser(user.id, selected);
           }
-          dlg.classList.add('hidden');
+          dlg.classList.add("hidden");
         };
 
-        document.getElementById('cancelPromoteBtn').onclick =
-        document.getElementById('closePromoteModal').onclick = () => {
-          dlg.classList.add('hidden');
-        };
+        document.getElementById("cancelPromoteBtn").onclick =
+          document.getElementById("closePromoteModal").onclick = () => {
+            dlg.classList.add("hidden");
+          };
       });
     }
   });
 }
 
-// ---------- Promotion ----------
+const ALLOWED_ROLES = ["customer", "ambassador", "employee", "senior employee", "representative", "admin"];
+
 async function promoteUser(userId, newRole) {
+  if (!userId) {
+    alert("Missing target user.");
+    return false;
+  }
+  if (!newRole || !ALLOWED_ROLES.includes(newRole)) {
+    alert("Invalid role selected.");
+    return false;
+  }
   try {
-    const res = await fetch(`${ADMIN_API}/users/${userId}/role`, {
-      method: 'PATCH',
-      headers: {
-        ...getAuthHeaders(),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ role: newRole }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    alert('User role updated.');
-    await loadUsers(); // Refresh table
+    await api.patch(`/admin/users/${userId}/role`, { role: newRole });
+    alert("User role updated.");
+    await loadUsers();
+    return true;
   } catch (err) {
-    console.error(err);
-    alert('Failed to promote user.');
+    console.error("promoteUser() failed:", err);
+    const msg = (err?.message || "").toLowerCase();
+    if (msg.includes("not authorized") || err?.status === 403) {
+      alert("Promotion blocked: your account is not authorized to change roles.");
+    } else if (msg.includes("invalid role")) {
+      alert("Promotion blocked: the selected role is not allowed.");
+    } else if (msg.includes("not found") || err?.status === 404) {
+      alert("Promotion failed: target user does not exist.");
+    } else {
+      alert("Promotion failed. Check console for details.");
+    }
+    return false;
   }
 }
 
-// ---------- Modal Close ----------
 if (closeModalBtn && modal) {
-  closeModalBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  closeModalBtn.addEventListener("click", () => modal.classList.add("hidden"));
 }
 
-// ---------- Search Filter ----------
 if (searchInput) {
-  searchInput.addEventListener('input', () => {
+  searchInput.addEventListener("input", () => {
     const q = searchInput.value.toLowerCase();
-    const filtered = userData.filter(u =>
-      (u.fullName  ?? '').toLowerCase().includes(q) ||
-      (u.username  ?? '').toLowerCase().includes(q) ||
-      (u.email     ?? '').toLowerCase().includes(q)
+    const filtered = userData.filter(
+      (u) =>
+        (u.fullName ?? "").toLowerCase().includes(q) ||
+        (u.username ?? "").toLowerCase().includes(q) ||
+        (u.email ?? "").toLowerCase().includes(q)
     );
     renderTable(filtered);
   });
 }
 
-// ---------- Initial load ----------
 async function loadUsers() {
   try {
-    const res = await fetch(`${ADMIN_API}/users`, {
-      headers: getAuthHeaders(),
-    });
-
-    if (res.status === 401) {
-      // bad/expired token → bounce to login
-      window.location.href = '../login.html';
-      return;
-    }
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-    // Your controller returns userDB (array)
-    const data = await res.json();
-    userData = Array.isArray(data) ? data : (data.users || []);
+    const data = await api.get("/admin/users");
+    userData = Array.isArray(data) ? data : [];
     renderTable(userData);
   } catch (err) {
-    console.error('User fetch error:', err);
-    alert('Failed to load users.');
+    console.error("User fetch error:", err);
+    alert("Failed to load users.");
   }
 }
 
-loadUsers();
+(async function init() {
+  myProfile = await requireStaff();
+  if (!myProfile) return;
+  await loadUsers();
+})();

@@ -26,11 +26,18 @@ export function getAuthHeaders() {
   };
 }
 
-const logoutBtn = document.getElementById('logoutBtn');
-if (logoutBtn) {
-  logoutBtn.addEventListener('click', () => {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminRole');
-    window.location.href = '/admin-panel/login.html';
-  });
-}
+import { supabase } from "./supabaseClient.js";
+
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest("#logoutBtn");
+  if (!btn) return;
+
+  try { await supabase.auth.signOut(); } catch {}
+
+  localStorage.removeItem("adminToken");
+  localStorage.removeItem("adminRole");
+
+  // Keep this path consistent across the whole admin panel:
+  window.location.href = "/admin-panel/login.html";
+});
+

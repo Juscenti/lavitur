@@ -1,50 +1,84 @@
 // admin-panel/js/login.js
-// Do NOT import requireAdminAuth on the login page.
+import { supabase } from "./supabaseClient.js";
 
-const existingToken = localStorage.getItem('adminToken');
-if (existingToken) {
-  window.location.href = 'index.html';
-}
+// Keep your existing keys for compatibility with older guards
+const TOKEN_KEY = "adminToken";
+const ROLE_KEY = "adminRole";
 
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
+// If already logged in, go to dashboard
+(async () => {
+  const { data } = await supabase.auth.getSession();
+  if (data?.session) {
+    window.location.href = "index.html";
+  }
+})();
+
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const usernameOrEmail = e.target.username.value.trim(); // ← key rename
+  const usernameOrEmail = e.target.username.value.trim();
   const password = e.target.password.value.trim();
-  const errorMsg = document.getElementById('errorMsg');
+  const errorMsg = document.getElementById("errorMsg");
 
-  errorMsg.textContent = '';
+  errorMsg.textContent = "";
 
   if (!usernameOrEmail || !password) {
-    errorMsg.textContent = 'Please fill in both fields.';
+    errorMsg.textContent = "Please fill in both fields.";
     return;
   }
 
   try {
-     const response = await fetch('http://localhost:5000/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ usernameOrEmail, password }),
+    // Supabase Auth email/password requires email.
+    // If you want username login, we can add a "lookup username → email" step.
+    // For now, treat input as email.
+    const email = usernameOrEmail;
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
 
-    if (!response.ok) {
-      errorMsg.textContent = response.status === 401
-        ? 'Invalid username or password.'
-        : 'Server error. Try again later.';
+    if (error || !data?.session) {
+      errorMsg.textContent = "Invalid username or password.";
       return;
     }
 
-    const data = await response.json();
+    // Get role from profiles (RLS allows user to read own profile)
+    const userId = data.session.user.id;
 
-    if (data.token && (data.role === 'admin' || data.role === 'representative')) {
-      localStorage.setItem('adminToken', data.token);
-      localStorage.setItem('adminRole', data.role);
-      window.location.href = 'index.html';
-    } else {
-      errorMsg.textContent = 'Unauthorized access.';
+    const { data: profile, error: profileErr } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .single();
+
+    if (profileErr) {
+      errorMsg.textContent = `Profile lookup failed: ${profileErr.message}`;
+      await supabase.auth.signOut();
+      return;
+    }
+    if (!profile?.role) {
+      errorMsg.textContent = "Profile found, but role is missing.";
+      await supabase.auth.signOut();
+      return;
     }
 
+    // Enforce admin access the same way your old code did
+    const role = profile.role;
+    const allowed = role === "admin" || role === "representative";
+
+    if (!allowed) {
+      errorMsg.textContent = "Unauthorized access.";
+      await supabase.auth.signOut();
+      return;
+    }
+
+    // Store a compatible token value (Supabase access token)
+    localStorage.setItem(TOKEN_KEY, data.session.access_token);
+    localStorage.setItem(ROLE_KEY, role);
+
+    window.location.href = "index.html";
   } catch (err) {
-    errorMsg.textContent = 'Network error. Check your connection.';
+    errorMsg.textContent = "Network error. Check your connection.";
   }
 });

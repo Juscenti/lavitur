@@ -1,59 +1,40 @@
-// auth.js
+// Frontend/js/auth.js
+import { supabase } from "./supabaseClient.js";
 
-// --- Users storage ---
-export function getUsers() {
-  return JSON.parse(localStorage.getItem('users') || '[]');
+export async function signUp(email, password) {
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) throw error;
+  return data;
 }
 
-export function saveUsers(users) {
-  localStorage.setItem('users', JSON.stringify(users));
+export async function signIn(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
 }
 
-// --- Duplicate check ---
-export function checkDuplicates(users, username, email) {
-  return {
-    username: users.some(u => u.username === username),
-    email: users.some(u => u.email === email)
-  };
+export async function signOut() {
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
 }
 
-// --- Password hashing ---
-export async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+export async function getSession() {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  return data.session;
 }
 
-// --- Authenticate user by username and password ---
-export async function authenticateUser(username, password) {
-  const users = getUsers();
-  // Passwords are hashed on registration
-  const hashedInputPwd = await hashPassword(password);
-  return users.find(u => u.username === username && u.password === hashedInputPwd) || null;
-}
+export async function getMyProfile() {
+  const { data: { user }, error: userErr } = await supabase.auth.getUser();
+  if (userErr) throw userErr;
+  if (!user) return null;
 
-// --- Role assignment ---
-export function determineRole(adminCode) {
-  return adminCode === '@dm1nL0g1n' ? 'admin' : 'customer';
-}
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id,email,username,role,created_at")
+    .eq("id", user.id)
+    .single();
 
-// --- Set logged-in user auth state ---
-export function setAuthState(user) {
-  const token = `${user.role}-${Date.now()}`;
-  localStorage.setItem('authToken', token);
-  localStorage.setItem('authRole', user.role);
-  localStorage.setItem('lavitur_user', JSON.stringify({
-    username: user.username,
-    fullName: user.fullName,
-    role: user.role
-  }));
-}
-
-// --- Clear auth state ---
-export function clearAuthState() {
-  localStorage.removeItem('authToken');
-  localStorage.removeItem('authRole');
-  localStorage.removeItem('lavitur_user');
+  if (error) throw error;
+  return data;
 }

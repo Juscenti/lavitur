@@ -23,18 +23,13 @@
   <link rel="stylesheet" href="css/shop.css" />
 
   <!-- JS -->
-  <script defer src="js/navbar.js"></script>
-  <script defer src="js/shop.js"></script>
+   <script type="module" src="./_partials/navbar.html"></script>
+  <script type="module" src="./js/navbar.js"></script>
+  <script type="module" src="./js/shop.js"></script>
 </head>
 <body class="shop-page">
 
-  <!-- Navbar -->
-  <div id="navbar-placeholder"></div>
-  <script>
-    fetch('_partials/navbar.html')
-      .then(r => r.text())
-      .then(html => document.getElementById('navbar-placeholder').innerHTML = html);
-  </script>
+  
 
   <!-- Shop Filters -->
   <aside class="filters">

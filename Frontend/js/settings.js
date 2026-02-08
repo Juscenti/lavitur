@@ -1,42 +1,52 @@
-document.addEventListener('DOMContentLoaded', () => {
-  // Redirect if not authenticated
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    window.location.replace('account.html');
+// Frontend/js/settings.js — uses REST API for profile (auth via Supabase)
+import { supabase } from "./supabaseClient.js";
+import { api } from "./api.js";
+
+async function requireSessionOrRedirect() {
+  const { data } = await supabase.auth.getSession();
+  const session = data?.session || null;
+  if (!session) {
+    window.location.replace("login.html");
+    return null;
+  }
+  return session;
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const session = await requireSessionOrRedirect();
+  if (!session) return;
+
+  const form = document.getElementById("settings-form");
+  const usernameInput = document.getElementById("username");
+  const emailInput = document.getElementById("email");
+
+  try {
+    const profile = await api.get("/me");
+    if (usernameInput) usernameInput.value = profile.username || "";
+    if (emailInput) {
+      emailInput.value = profile.email || "";
+      emailInput.disabled = true;
+    }
+  } catch (err) {
+    console.error("Failed to load settings:", err);
     return;
   }
 
-  // Load current user data
-  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-  const users = JSON.parse(localStorage.getItem('users') || '[]');
-  const form = document.getElementById('settings-form');
+  if (!form) return;
 
-  // Prefill form
-  document.getElementById('fullname').value = currentUser.fullName || '';
-  document.getElementById('email').value    = currentUser.email    || '';
-
-  form.addEventListener('submit', e => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
-
-    const newFull = document.getElementById('fullname').value.trim();
-    const newEmail = document.getElementById('email').value.trim();
-    const newPwd   = document.getElementById('password').value;
-
-    // Update users array
-    const updatedUsers = users.map(u => {
-      if (u.username === currentUser.username) {
-        u.fullName = newFull;
-        u.email    = newEmail;
-        if (newPwd) u.password = newPwd;
-      }
-      return u;
-    });
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
-
-    // Update currentUser in session
-    const updatedCurrent = { ...currentUser, fullName: newFull, email: newEmail };
-    localStorage.setItem('currentUser', JSON.stringify(updatedCurrent));
-
-    alert('Settings updated successfully.');
+    const newUsername = (usernameInput?.value || "").trim();
+    const usernameRegex = /^[a-zA-Z0-9._]+$/;
+    if (!newUsername || !usernameRegex.test(newUsername)) {
+      alert("Invalid username. Use letters, numbers, dots, and underscores.");
+      return;
+    }
+    try {
+      await api.patch("/me", { username: newUsername });
+      alert("Settings updated successfully.");
+    } catch (err) {
+      alert(err?.data?.error || err?.message || "Failed to update settings.");
+    }
   });
 });
