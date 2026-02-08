@@ -1,0 +1,11 @@
+/* React app base – layout-specific overrides if needed.
+   Main styles load from /css/* in index.html to preserve original UI. */
+body {
+  margin: 0;
+  padding: 0;
+}
+
+.cta-button a {
+  color: inherit;
+  text-decoration: none;
+}

@@ -1,15 +1,27 @@
 /**
  * Admin panel API client — all data requests go to the REST API.
- * Uses stored adminToken (Supabase access_token) for Authorization.
+ * Uses current Supabase session token (auto-refreshed); falls back to stored adminToken.
  */
 const API_BASE = typeof window !== 'undefined' && window.API_BASE ? window.API_BASE : '';
 
-function getToken() {
-  return localStorage.getItem('adminToken');
+const TOKEN_KEY = 'adminToken';
+
+/** Prefer live session token (refreshed by Supabase); fall back to localStorage. */
+async function getToken() {
+  try {
+    const { supabase } = await import('./supabaseClient.js');
+    const { data } = await supabase.auth.getSession();
+    const sessionToken = data?.session?.access_token;
+    if (sessionToken) {
+      localStorage.setItem(TOKEN_KEY, sessionToken);
+      return sessionToken;
+    }
+  } catch (_) {}
+  return localStorage.getItem(TOKEN_KEY);
 }
 
 async function request(method, path, options = {}) {
-  const token = getToken();
+  const token = await getToken();
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
@@ -40,7 +52,7 @@ async function request(method, path, options = {}) {
 
 /** FormData for multipart (e.g. file upload) — don't set Content-Type so browser sets boundary */
 async function requestMultipart(method, path, formData) {
-  const token = getToken();
+  const token = await getToken();
   const headers = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
 

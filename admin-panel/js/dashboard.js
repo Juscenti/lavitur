@@ -5,8 +5,12 @@ import { requireStaff } from "./adminGuard.js";
 let myProfile = null;
 
 (async () => {
+  const loadingEl = document.getElementById("dashboard-loading");
+  const mainEl = document.getElementById("main");
   myProfile = await requireStaff();
   if (!myProfile) return;
+  if (loadingEl) loadingEl.style.display = "none";
+  if (mainEl) mainEl.style.display = "";
 })();
 
 function formatCurrency(n, currency = "JMD") {
@@ -18,12 +22,20 @@ function formatCurrency(n, currency = "JMD") {
   }
 }
 
+/** Load HTML fragment into a selector (used for sidebar + header). */
+function loadComponent(path, selector) {
+  return fetch(path)
+    .then((res) => res.text())
+    .then((html) => {
+      const el = document.querySelector(selector);
+      if (el) el.innerHTML = html;
+    })
+    .catch((err) => console.error("Failed to load " + path, err));
+}
+
 window.addEventListener("DOMContentLoaded", async () => {
-  const loadComponent = window.loadComponent;
-  if (typeof loadComponent === "function") {
-    await loadComponent("./components/sidebar.html", "#sidebar");
-    await loadComponent("./components/header.html", "#topbar");
-  }
+  await loadComponent("./components/sidebar.html", "#sidebar");
+  await loadComponent("./components/header.html", "#topbar");
 
   try {
     const data = await api.get("/admin/dashboard");

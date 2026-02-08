@@ -5,11 +5,13 @@ The backend is a REST API that uses **Supabase** for auth and data. All client a
 ## Setup
 
 1. **Environment**  
-   Copy `.env.example` to `.env` and set:
+   Create `.env` with:
 
    - `SUPABASE_URL` – your Supabase project URL  
    - `SUPABASE_ANON_KEY` – anon/public key (used to verify user JWTs)  
    - `SUPABASE_SERVICE_ROLE_KEY` – service role key (server-only, for DB/storage)
+
+   **Important:** These must be from the **same Supabase project** as the admin panel. If the admin panel uses `admin-panel/js/supabaseClient.js` (e.g. `https://ueotizgitowpvizkbgst.supabase.co`), use that project’s URL and keys in Backend `.env`. Otherwise the API will not find your profile and admin actions will fail with "No role found for current user in profiles."
 
 2. **Run**
 

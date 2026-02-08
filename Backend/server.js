@@ -1,6 +1,6 @@
 // Backend/server.js — REST API (Supabase backend)
-import dotenv from 'dotenv';
-dotenv.config();
+// Load .env first (must run before any other imports that use process.env)
+import 'dotenv/config';
 
 import express from 'express';
 import cors from 'cors';

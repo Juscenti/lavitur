@@ -22,8 +22,9 @@
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/shop.css" />
 
-  <!-- JS -->
-   <script type="module" src="./_partials/navbar.html"></script>
+  <!-- JS (config must load before api-using scripts) -->
+  <script src="js/config.js"></script>
+  <script type="module" src="./_partials/navbar.html"></script>
   <script type="module" src="./js/navbar.js"></script>
   <script type="module" src="./js/shop.js"></script>
 </head>

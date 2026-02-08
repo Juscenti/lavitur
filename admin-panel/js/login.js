@@ -63,8 +63,8 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       return;
     }
 
-    // Enforce admin access the same way your old code did
-    const role = profile.role;
+    // Enforce admin access (case-insensitive)
+    const role = (profile.role || "").toString().toLowerCase();
     const allowed = role === "admin" || role === "representative";
 
     if (!allowed) {
@@ -73,11 +73,14 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       return;
     }
 
-    // Store a compatible token value (Supabase access token)
+    // Store token and role before redirect so dashboard can gate on them immediately
     localStorage.setItem(TOKEN_KEY, data.session.access_token);
     localStorage.setItem(ROLE_KEY, role);
 
-    window.location.href = "index.html";
+    // Short delay so session is persisted before navigation (avoids race on dashboard load)
+    setTimeout(() => {
+      window.location.href = "index.html";
+    }, 50);
   } catch (err) {
     errorMsg.textContent = "Network error. Check your connection.";
   }

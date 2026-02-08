@@ -1,0 +1,252 @@
+/* =========================
+   Lavitúr Shop — High-End Editorial
+   File: css/shop.css
+   Works with your current HTML
+   ========================= */
+
+:root{
+  --bg: #fbfaf8;              /* warm off-white */
+  --panel: #ffffff;
+  --text: #0e0f12;
+  --muted: rgba(14,15,18,.62);
+  --line: rgba(14,15,18,.12);
+
+  --serif: "Playfair Display", Georgia, serif;
+  --sans: "Urbanist", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+  --radius: 18px;
+  --radius-sm: 14px;
+}
+
+body.shop-page{
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+}
+
+/* Layout: elegant spacing */
+.shop-page{
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 42px;
+  padding: 48px 56px 60px;
+}
+
+/* Filters: boutique sidebar */
+.filters{
+  position: sticky;
+  top: 24px;
+  align-self: start;
+
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.filters h2{
+  font-family: var(--serif);
+  font-size: 22px;
+  letter-spacing: .2px;
+  margin: 0 0 18px;
+}
+
+.filter-group{
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+/* Luxury checkbox: subtle, not “app-y” */
+.filter-group label{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  font-size: 14px;
+  letter-spacing: .25px;
+  color: rgba(14,15,18,.82);
+  cursor: pointer;
+  user-select: none;
+}
+
+.filter-group input[type="checkbox"]{
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  border: 1px solid rgba(14,15,18,.28);
+  background: transparent;
+  display: grid;
+  place-items: center;
+}
+
+.filter-group input[type="checkbox"]::after{
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--text);
+  transform: scale(0);
+  transition: transform .12s ease;
+}
+
+.filter-group input[type="checkbox"]:checked::after{
+  transform: scale(1);
+}
+
+/* Product grid: airy and premium */
+.product-grid{
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 34px 26px;
+  align-content: start;
+}
+
+/* Card: no heavy shadow, just structure */
+.product-card{
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  position: relative;
+}
+
+/* Image: clean, fashion-like crop */
+.product-card img{
+  width: 100%;
+  aspect-ratio: 3 / 4; /* fashion standard */
+  object-fit: cover;
+  display: block;
+  border-radius: var(--radius);
+  background: #f1f0ed;
+
+  transition: transform .35s ease, filter .35s ease;
+}
+
+.product-card:hover img{
+  transform: scale(1.015);
+  filter: contrast(1.02);
+}
+
+/* Typography: editorial */
+.product-card h3{
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  margin: 12px 2px 6px;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Price: understated */
+.product-card p{
+  margin: 0 2px;
+  font-size: 14px;
+  letter-spacing: .25px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* Actions: hidden until hover for “luxury” feel */
+.product-card .actions{
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity .22s ease, transform .22s ease;
+}
+
+.product-card:hover .actions{
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Buttons: refined, label-like */
+.product-card button{
+  font-family: var(--sans);
+  font-size: 13px;
+  letter-spacing: .35px;
+  text-transform: uppercase;
+  font-weight: 700;
+
+  border-radius: 999px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, transform .12s ease;
+}
+
+.product-card button:active{
+  transform: scale(.98);
+}
+
+.product-card .add-cart{
+  flex: 1;
+  background: var(--text);
+  color: #fff;
+  border: 1px solid var(--text);
+}
+
+.product-card .add-cart:hover{
+  background: rgba(14,15,18,.92);
+}
+
+.product-card .add-wishlist{
+  width: 44px;
+  display: grid;
+  place-items: center;
+
+  background: transparent;
+  color: rgba(14,15,18,.92);
+  border: 1px solid rgba(14,15,18,.18);
+}
+
+.product-card .add-wishlist:hover{
+  border-color: rgba(14,15,18,.32);
+  background: rgba(14,15,18,.03);
+}
+
+/* Optional: a thin divider between rows on large screens (very “fashion site”) */
+@media (min-width: 1100px){
+  .product-grid{
+    padding-top: 8px;
+  }
+}
+
+/* Footer: simple */
+.footer{
+  grid-column: 1 / -1;
+  margin-top: 52px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+  color: rgba(14,15,18,.60);
+  text-align: center;
+  font-size: 13px;
+  letter-spacing: .2px;
+}
+
+/* Responsive */
+@media (max-width: 1020px){
+  .shop-page{
+    grid-template-columns: 1fr;
+    padding: 34px 20px 48px;
+    gap: 26px;
+  }
+
+  .filters{
+    position: static;
+  }
+
+  .product-card .actions{
+    opacity: 1;
+    transform: none;
+  }
+}

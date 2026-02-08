@@ -147,6 +147,33 @@ function statusBadgeClass(status) {
   }
 }
 
+/**
+ * Buttons for status flow: draft/pending → Publish → published (Live) → Archive → archived → Restore to pending.
+ * - draft: Submit (→ pending), Publish (→ published)
+ * - pending: Publish (→ published)
+ * - published: Archive (→ archived)
+ * - archived: Restore to pending (→ pending)
+ */
+function getStatusActionButtons(id, status) {
+  const s = (status || "draft").toLowerCase();
+  const idAttr = `data-id="${id}"`;
+  const actionAttr = (statusValue) => `data-status-action="${statusValue}"`;
+  const btn = (label, statusValue, primary = false) =>
+    `<button class="pbtn2 ${primary ? "pbtn2--primary" : "pbtn2--ghost"}" ${idAttr} ${actionAttr(statusValue)}>${escapeHtml(label)}</button>`;
+
+  if (s === "published") {
+    return btn("Archive", "archived", true);
+  }
+  if (s === "archived") {
+    return btn("Restore to pending", "pending", true);
+  }
+  if (s === "pending") {
+    return btn("Publish", "published", true);
+  }
+  // draft (or unknown)
+  return btn("Submit", "pending") + "\n                  " + btn("Publish", "published", true);
+}
+
 // ✅ REPLACE your entire renderEditorialView with this version
 function renderEditorialView(products) {
   if (!categoryContainer) return;
@@ -176,8 +203,10 @@ function renderEditorialView(products) {
       <div class="product-grid">
         ${categoryMap[category]
           .map((p) => {
-            const statusText = p.status === "published" ? "Live" : String(p.status || "draft");
+            const status = (p.status || "draft").toLowerCase();
+            const statusText = status === "published" ? "Live" : status === "pending" ? "Pending" : status === "archived" ? "Archived" : "Draft";
             const badgeClass = statusBadgeClass(p.status);
+            const actionButtons = getStatusActionButtons(p.id, status);
 
             return `
               <div class="product-card" data-id="${p.id}">
@@ -188,7 +217,6 @@ function renderEditorialView(products) {
                       : `<div class="pcard-thumb--empty">No Image</div>`
                     }
 
-                    <!-- ✅ Status badge now lives inside the thumb -->
                     <div class="pcard-badge ${badgeClass}">
                       ${escapeHtml(statusText)}
                     </div>
@@ -202,8 +230,7 @@ function renderEditorialView(products) {
                 </div>
 
                 <div class="pcard-actions">
-                  <button class="pbtn2 pbtn2--ghost submitBtn" data-id="${p.id}">Submit</button>
-                  <button class="pbtn2 pbtn2--primary publishBtn" data-id="${p.id}">Publish</button>
+                  ${actionButtons}
                   <button class="pbtn2 pbtn2--ghost editBtn" data-id="${p.id}">Edit</button>
                 </div>
               </div>
@@ -224,20 +251,18 @@ function renderEditorialView(products) {
     });
   });
 
-  // Bind Submit/Publish/Edit in editorial cards
+  // Bind status action + Edit in editorial cards
   categoryContainer.addEventListener("click", async (e) => {
-    const submit = e.target.closest(".submitBtn");
-    const publish = e.target.closest(".publishBtn");
+    const actionBtn = e.target.closest("[data-status-action]");
     const edit = e.target.closest(".editBtn");
 
-    if (submit) {
-      await updateStatus(submit.dataset.id, "pending");
-      await loadProducts();
-    }
-
-    if (publish) {
-      await updateStatus(publish.dataset.id, "published");
-      await loadProducts();
+    if (actionBtn) {
+      const id = actionBtn.dataset.id;
+      const targetStatus = actionBtn.dataset.statusAction;
+      if (id && targetStatus) {
+        const ok = await updateStatus(id, targetStatus);
+        if (ok) await loadProducts();
+      }
     }
 
     if (edit) {
@@ -247,13 +272,15 @@ function renderEditorialView(products) {
 }
 
 
-/** Status update via Supabase */
+/** Status update via API. Returns true on success. */
 async function updateStatus(id, status) {
-  await api.patch(`/admin/products/${id}/status`, { status });
-
-  if (error) {
-    console.error(error);
-    alert(error.message || "Failed to update product status.");
+  try {
+    await api.patch(`/admin/products/${id}/status`, { status });
+    return true;
+  } catch (err) {
+    console.error("updateStatus:", err);
+    alert(err?.data?.error || err?.message || "Failed to update product status.");
+    return false;
   }
 }
 

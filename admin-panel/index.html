@@ -7,15 +7,18 @@
   <title>Lavitúr Admin Dashboard</title>
   <link rel="stylesheet" href="css/admin.css" />
   <meta http-equiv="Cache-Control" content="no-store" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="js/config.js"></script>
 </head>
 <body>
 
   <div id="admin-container">
+    <div id="dashboard-loading" style="display:flex;align-items:center;justify-content:center;min-height:60vh;font-size:1.1rem;color:#555;">Checking access…</div>
     <!-- Sidebar -->
     <aside id="sidebar"></aside>
 
     <!-- Main Content Area -->
-    <main id="main">
+    <main id="main" style="display:none;">
       <header id="topbar"></header>
 
       <section id="dashboard-content">

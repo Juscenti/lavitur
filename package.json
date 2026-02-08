@@ -1,0 +1,11 @@
+{
+  "name": "lavitur",
+  "private": true,
+  "description": "Lavitúr – Frontend, Admin, Backend",
+  "scripts": {
+    "serve": "npx serve . -l 5501",
+    "frontend": "npm run serve",
+    "backend": "cd Backend && npm run dev",
+    "react": "cd frontend-react && npm run dev"
+  }
+}

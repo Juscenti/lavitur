@@ -1,5 +1,5 @@
 // Backend/controllers/productsController.js
-import { supabaseAdmin, getProductMediaPublicUrl } from '../config/supabase.js';
+import { supabaseAdmin, supabaseWithUserToken, getProductMediaPublicUrl } from '../config/supabase.js';
 
 /** Public: published products with categories and primary image for shop */
 export async function listPublicProducts(req, res) {
@@ -109,13 +109,15 @@ export async function listAdminProducts(req, res) {
   }
 }
 
-/** Admin: create product */
+/** Admin: create product — use user JWT so DB triggers (e.g. role check) see auth.uid() */
 export async function createProduct(req, res) {
   try {
     const { title, description, price, stock, categoryName } = req.body;
     const userId = req.userId;
+    const authHeader = req.headers.authorization;
+    const supabase = supabaseWithUserToken(authHeader);
 
-    const { data: inserted, error } = await supabaseAdmin
+    const { data: inserted, error } = await supabase
       .from('products')
       .insert({
         title: title || 'Untitled',
@@ -144,13 +146,14 @@ export async function createProduct(req, res) {
   }
 }
 
-/** Admin: update product */
+/** Admin: update product — use user JWT so DB triggers see auth.uid() */
 export async function updateProduct(req, res) {
   try {
     const { id } = req.params;
     const { title, description, price, stock, categoryName } = req.body;
+    const supabase = supabaseWithUserToken(req.headers.authorization);
 
-    const { error } = await supabaseAdmin
+    const { error } = await supabase
       .from('products')
       .update({
         title,
@@ -177,7 +180,7 @@ export async function updateProduct(req, res) {
   }
 }
 
-/** Admin: update product status (e.g. pending -> published) */
+/** Admin: update product status — use user JWT so DB triggers see auth.uid() */
 export async function updateProductStatus(req, res) {
   try {
     const { id } = req.params;
@@ -186,8 +189,8 @@ export async function updateProductStatus(req, res) {
     if (!status || !allowed.includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
-
-    const { error } = await supabaseAdmin.from('products').update({ status }).eq('id', id);
+    const supabase = supabaseWithUserToken(req.headers.authorization);
+    const { error } = await supabase.from('products').update({ status }).eq('id', id);
     if (error) throw error;
     res.json({ ok: true });
   } catch (err) {
@@ -196,11 +199,12 @@ export async function updateProductStatus(req, res) {
   }
 }
 
-/** Admin: delete product */
+/** Admin: delete product — use user JWT so DB triggers see auth.uid() */
 export async function deleteProduct(req, res) {
   try {
     const { id } = req.params;
-    const { error } = await supabaseAdmin.from('products').delete().eq('id', id);
+    const supabase = supabaseWithUserToken(req.headers.authorization);
+    const { error } = await supabase.from('products').delete().eq('id', id);
     if (error) throw error;
     res.json({ ok: true });
   } catch (err) {

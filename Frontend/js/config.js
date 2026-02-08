@@ -1,5 +1,4 @@
-// Set API_BASE if your backend runs on a different origin (e.g. Backend on :5000, Frontend on :5500).
-// Leave unset for same-origin (e.g. when serving Frontend from the same host as the API).
+// API base URL — when Frontend is on :5501 and Backend on :5000, set this so /api/* hits the Backend.
 if (typeof window !== "undefined" && !window.API_BASE) {
-  // window.API_BASE = "http://localhost:5000";
+  window.API_BASE = "http://localhost:5000";
 }
