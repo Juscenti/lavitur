@@ -22,11 +22,16 @@ sendBtn.onclick = async () => {
   toggleInput(false);
 
   try {
-    const res = await fetch('http://localhost:5000/api/ai', {
+    const res = await fetch('http://localhost:5001/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: prompt })
     });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || `HTTP ${res.status}`);
+    }
 
     const data = await res.json();
     if (data.reply) {
@@ -38,7 +43,7 @@ sendBtn.onclick = async () => {
 
   } catch (err) {
     appendMessage('ai', '⚠️ AI is currently unavailable.');
-    console.error('Fetch error:', err);
+    console.error('AI Error:', err.message || err);
   } finally {
     toggleInput(true);
   }

@@ -42,8 +42,8 @@ export default function Navbar() {
             <ul className="dropdown-menu" style={{ display: accountOpen ? 'block' : 'none', opacity: accountOpen ? 1 : 0, transform: accountOpen ? 'translateY(0)' : 'translateY(10px)' }}>
               {user ? (
                 <>
-                  <li><Link to="/profile">Profile</Link></li>
-                  <li><Link to="/settings">Settings</Link></li>
+                  <li><Link to="frontend/profile.html">Profile</Link></li>
+                  <li><Link to="frontend/settings.html">Settings</Link></li>
                   <li><a href="#" onClick={(e) => { e.preventDefault(); signOut(); }}>Log out</a></li>
                 </>
               ) : (

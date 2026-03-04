@@ -1,5 +1,37 @@
-<script type="module">
-  import { requireAdminAuth } from '../js/auth.js';
-  requireAdminAuth();
-</script>
-<meta http-equiv="Cache-Control" content="no-store" />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <base href="/admin-panel/" />
+  <title>Admin — Settings</title>
+  <link rel="stylesheet" href="../css/admin.css" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+</head>
+<body>
+  <div id="admin-container">
+    <aside id="sidebar"></aside>
+    <header id="topbar"></header>
+    <script>
+      fetch('../components/sidebar.html').then(r=>r.text()).then(html=>{document.getElementById('sidebar').innerHTML=html}).catch(()=>{});
+      fetch('../components/header.html').then(r=>r.text()).then(html=>{document.getElementById('topbar').innerHTML=html}).catch(()=>{});
+    </script>
+
+    <main id="main">
+    <section class="panel">
+      <h1>Settings</h1>
+      <div id="settings-root">Manage global settings and preferences.</div>
+    </section>
+  </main>
+
+    </main>
+  </div>
+
+  <script type="module">
+    import { requireAdminAuth } from '../js/auth.js';
+    requireAdminAuth();
+  </script>
+
+  <script src="../js/support.js" type="module"></script>
+</body>
+</html>

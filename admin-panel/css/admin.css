@@ -19,6 +19,47 @@ body {
   height: 100vh;
 }
 
+/* Sidebar nav inside #sidebar */
+#sidebar .sidebar-nav {
+  padding: 1.25rem 1rem;
+}
+
+#sidebar .sidebar-nav .logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+#sidebar .sidebar-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#sidebar .sidebar-nav li {
+  margin: 0.35rem 0;
+}
+
+#sidebar .sidebar-nav a {
+  color: #e6e6e6;
+  text-decoration: none;
+  display: block;
+  padding: 0.6rem 0.6rem;
+  border-radius: 8px;
+}
+
+#sidebar .sidebar-nav a:hover {
+  background: rgba(255,255,255,0.03);
+  color: #fff;
+}
+
+#sidebar .sidebar-nav a.active {
+  background: linear-gradient(90deg,#222,#111);
+  color: #fff;
+  box-shadow: inset 3px 0 0 #ff7a59;
+}
+
 #main {
   flex: 1;
   display: flex;
@@ -33,6 +74,43 @@ body {
   top: 0;
   z-index: 10;
 }
+
+/* Topbar content inserted by components/header.html */
+.topbar-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topbar-wrapper .admin-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.topbar-wrapper .admin-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.topbar-wrapper .avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.logout-btn, .logout-button { /* support both classes */
+  padding: 0.48em 0.9em;
+  background-color: #ff5a3c;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.logout-btn:hover { background-color: #ff784f; }
 
 #dashboard-content {
   padding: 2rem;

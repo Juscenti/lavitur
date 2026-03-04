@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.removeItem('authToken');
       localStorage.removeItem('authRole');
       localStorage.removeItem('lavitur_user');
-      window.location.href = 'index.html';
+      window.location.href = (window.FRONTEND_HOME || '/Frontend/');
     });
   });
 });

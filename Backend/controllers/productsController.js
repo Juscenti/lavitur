@@ -7,7 +7,7 @@ export async function listPublicProducts(req, res) {
     const { data: prodRows, error: prodErr } = await supabaseAdmin
       .from('products')
       .select(`
-        id, title, price, stock, status, created_at,
+        id, title, description, price, stock, status, created_at,
         product_media (file_path, media_type, is_primary, position)
       `)
       .eq('status', 'published')
@@ -32,27 +32,40 @@ export async function listPublicProducts(req, res) {
       .select('id, name, slug');
 
     const catById = new Map((categories || []).map((c) => [c.id, c]));
-    const prodToCat = new Map((links || []).map((l) => [l.product_id, l.category_id]));
+    const prodToCatIds = new Map();
+    (links || []).forEach((l) => {
+      const arr = prodToCatIds.get(l.product_id) || [];
+      arr.push(l.category_id);
+      prodToCatIds.set(l.product_id, arr);
+    });
 
     const list = (prodRows || []).map((p) => {
-      const catId = prodToCat.get(p.id);
-      const cat = catId ? catById.get(catId) : null;
-      const slug = cat?.slug || (cat?.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '') || 'uncategorized';
+      const catIds = prodToCatIds.get(p.id) || [];
+      const cats = catIds.map((cid) => catById.get(cid)).filter(Boolean);
+      const slugs = cats.map((c) => c.slug || (c.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '')).filter(Boolean);
+      const names = cats.map((c) => c.name || '').filter(Boolean);
+      const primaryCat = cats[0];
+      const slug = primaryCat?.slug || (primaryCat?.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '') || (slugs[0] || 'uncategorized');
       const media = (p.product_media || []).sort((a, b) => {
         if (a.is_primary && !b.is_primary) return -1;
         if (!a.is_primary && b.is_primary) return 1;
         return (a.position ?? 0) - (b.position ?? 0);
       });
-      const primary = media.find((m) => m.media_type === 'image') || media[0];
-      const image_url = primary ? getProductMediaPublicUrl(primary.file_path) : '';
+      const primaryMedia = media.find((m) => m.media_type === 'image') || media[0];
+      const image_url = primaryMedia ? getProductMediaPublicUrl(primaryMedia.file_path) : '';
 
       return {
         id: p.id,
         title: p.title || 'Untitled',
+        description: p.description || '',
         price: Number(p.price ?? 0),
         stock: Number(p.stock ?? 0),
         image_url,
         category_slug: slug,
+        category_name: primaryCat?.name || names[0] || '',
+        category_slugs: slugs.length ? slugs : [slug || 'uncategorized'],
+        category_names: names.length ? names : [primaryCat?.name || ''],
+        created_at: p.created_at,
       };
     });
 
@@ -60,6 +73,85 @@ export async function listPublicProducts(req, res) {
   } catch (err) {
     console.error('listPublicProducts:', err);
     res.status(500).json({ error: err.message || 'Failed to fetch products' });
+  }
+}
+
+/** Public: single published product by id (for PDP) */
+export async function getOnePublicProduct(req, res) {
+  try {
+    const id = req.params.id;
+    const { data: row, error } = await supabaseAdmin
+      .from('products')
+      .select(`
+        id, title, description, price, stock, status, created_at,
+        product_media (file_path, media_type, is_primary, position)
+      `)
+      .eq('id', id)
+      .eq('status', 'published')
+      .single();
+
+    if (error || !row) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    const { data: links } = await supabaseAdmin
+      .from('product_categories')
+      .select('category_id')
+      .eq('product_id', row.id);
+    const catIds = (links || []).map((l) => l.category_id).filter(Boolean);
+    let category_slug = 'uncategorized';
+    let category_name = '';
+    const category_slugs = [];
+    const category_names = [];
+    if (catIds.length) {
+      const { data: cats } = await supabaseAdmin.from('categories').select('id, name, slug').in('id', catIds);
+      (cats || []).forEach((c) => {
+        const s = c.slug || (c.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '') || 'uncategorized';
+        category_slugs.push(s);
+        category_names.push(c.name || '');
+      });
+      if (category_slugs.length) category_slug = category_slugs[0];
+      if (category_names.length) category_name = category_names[0];
+    }
+
+    // Supabase .single() can return nested relation as one object instead of array — normalize to array
+    let rawMedia = row.product_media;
+    if (!Array.isArray(rawMedia)) rawMedia = rawMedia ? [rawMedia] : [];
+    // If nested relation is empty, fetch media directly (avoids PDP missing images when relation doesn't load)
+    if (rawMedia.length === 0) {
+      const { data: mediaRows } = await supabaseAdmin
+        .from('product_media')
+        .select('file_path, media_type, is_primary, position')
+        .eq('product_id', row.id)
+        .order('position', { ascending: true });
+      rawMedia = mediaRows || [];
+    }
+    const media = [...rawMedia].sort((a, b) => {
+      if (a.is_primary && !b.is_primary) return -1;
+      if (!a.is_primary && b.is_primary) return 1;
+      return (a.position ?? 0) - (b.position ?? 0);
+    });
+    const primary = media.find((m) => m.media_type === 'image') || media[0];
+    const image_url = primary ? getProductMediaPublicUrl(primary.file_path) : '';
+    const images = media.filter((m) => m.media_type === 'image').map((m) => getProductMediaPublicUrl(m.file_path));
+
+    res.json({
+      id: row.id,
+      title: row.title || 'Untitled',
+      description: row.description || '',
+      price: Number(row.price ?? 0),
+      stock: Number(row.stock ?? 0),
+      image_url,
+      images,
+      category_slug,
+      category_name,
+      category_slugs: category_slugs.length ? category_slugs : [category_slug],
+      category_names: category_names.length ? category_names : [category_name],
+      created_at: row.created_at,
+    });
+  } catch (err) {
+    console.error('getOnePublicProduct:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch product' });
   }
 }
 
@@ -80,10 +172,16 @@ export async function listAdminProducts(req, res) {
     const { data: links } = await supabaseAdmin.from('product_categories').select('product_id, category_id');
 
     const catById = new Map((catRows || []).map((c) => [c.id, c.name]));
-    const prodToCat = new Map((links || []).map((l) => [l.product_id, l.category_id]));
+    const prodToCatIds = new Map();
+    (links || []).forEach((l) => {
+      const arr = prodToCatIds.get(l.product_id) || [];
+      arr.push(l.category_id);
+      prodToCatIds.set(l.product_id, arr);
+    });
 
     const list = (prodRows || []).map((p) => {
-      const catName = catById.get(prodToCat.get(p.id)) || 'Unassigned';
+      const catIds = prodToCatIds.get(p.id) || [];
+      const catNames = catIds.map((cid) => catById.get(cid)).filter(Boolean);
       const media = p.product_media || [];
       const primary = media.find((m) => m.is_primary && m.media_type === 'image') || media.find((m) => m.media_type === 'image');
       const thumbUrl = primary ? getProductMediaPublicUrl(primary.file_path) : null;
@@ -96,7 +194,8 @@ export async function listAdminProducts(req, res) {
         stock: p.stock ?? '',
         status: p.status,
         published: p.status === 'published',
-        category: catName,
+        category: catNames.length ? catNames.join(', ') : 'Unassigned',
+        categories: catNames.length ? catNames : ['Unassigned'],
         thumbUrl,
         product_media: media,
       };
@@ -112,7 +211,7 @@ export async function listAdminProducts(req, res) {
 /** Admin: create product — use user JWT so DB triggers (e.g. role check) see auth.uid() */
 export async function createProduct(req, res) {
   try {
-    const { title, description, price, stock, categoryName } = req.body;
+    const { title, description, price, stock, categoryName, categoryNames } = req.body;
     const userId = req.userId;
     const authHeader = req.headers.authorization;
     const supabase = supabaseWithUserToken(authHeader);
@@ -132,10 +231,12 @@ export async function createProduct(req, res) {
 
     if (error) throw error;
 
-    if (categoryName && categoryName !== 'Unassigned') {
-      const { data: cats } = await supabaseAdmin.from('categories').select('id').eq('name', categoryName).limit(1);
-      if (cats?.[0]) {
-        await supabaseAdmin.from('product_categories').insert({ product_id: inserted.id, category_id: cats[0].id });
+    const names = Array.isArray(categoryNames) ? categoryNames.filter((n) => n && n !== 'Unassigned') : (categoryName && categoryName !== 'Unassigned' ? [categoryName] : []);
+    if (names.length) {
+      const { data: cats } = await supabaseAdmin.from('categories').select('id, name').in('name', names);
+      const inserts = (cats || []).map((c) => ({ product_id: inserted.id, category_id: c.id }));
+      if (inserts.length) {
+        await supabaseAdmin.from('product_categories').insert(inserts);
       }
     }
 
@@ -150,7 +251,7 @@ export async function createProduct(req, res) {
 export async function updateProduct(req, res) {
   try {
     const { id } = req.params;
-    const { title, description, price, stock, categoryName } = req.body;
+    const { title, description, price, stock, categoryName, categoryNames } = req.body;
     const supabase = supabaseWithUserToken(req.headers.authorization);
 
     const { error } = await supabase
@@ -166,10 +267,12 @@ export async function updateProduct(req, res) {
     if (error) throw error;
 
     await supabaseAdmin.from('product_categories').delete().eq('product_id', id);
-    if (categoryName && categoryName !== 'Unassigned') {
-      const { data: cats } = await supabaseAdmin.from('categories').select('id').eq('name', categoryName).limit(1);
-      if (cats?.[0]) {
-        await supabaseAdmin.from('product_categories').insert({ product_id: id, category_id: cats[0].id });
+    const names = Array.isArray(categoryNames) ? categoryNames.filter((n) => n && n !== 'Unassigned') : (categoryName && categoryName !== 'Unassigned' ? [categoryName] : []);
+    if (names.length) {
+      const { data: cats } = await supabaseAdmin.from('categories').select('id, name').in('name', names);
+      const inserts = (cats || []).map((c) => ({ product_id: id, category_id: c.id }));
+      if (inserts.length) {
+        await supabaseAdmin.from('product_categories').insert(inserts);
       }
     }
 

@@ -16,14 +16,23 @@ function normalizeRole(role) {
 }
 
 export async function requireStaff() {
-  // 1) Use stored token/role first (set by login before redirect) so we don't bounce
-  //    when Supabase session isn't rehydrated yet after full page load.
+  // 1) Stored token/role only trust when there is a real Supabase session (avoid showing dashboard when logged out)
   const storedToken = localStorage.getItem(TOKEN_KEY);
   const storedRole = (localStorage.getItem(ROLE_KEY) || "").toLowerCase();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const hasSession = !!sessionData?.session;
+
   if (storedToken && (storedRole === "admin" || storedRole === "representative")) {
     const profileFromSupabase = await getMyProfile().catch(() => null);
     if (profileFromSupabase) return profileFromSupabase;
-    // Session not ready yet but we have valid admin login – return minimal profile so dashboard shows
+    // No profile: if no session at all, clear stale storage and redirect (user is logged out)
+    if (!hasSession) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(ROLE_KEY);
+      window.location.replace("../Frontend/index.html");
+      return null;
+    }
+    // Session exists but profile not ready yet – minimal profile so dashboard shows
     return { role: storedRole, email: "", username: "" };
   }
 
@@ -38,7 +47,8 @@ export async function requireStaff() {
     return profile;
   }
 
-  window.location.href = "./login.html";
+  // Redirect non-staff to frontend home – don't show admin UI at all
+  window.location.replace("../Frontend/index.html");
   return null;
 }
 

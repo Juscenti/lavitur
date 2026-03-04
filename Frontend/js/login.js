@@ -36,8 +36,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
-      // Redirect to HOME
-      window.location.href = "index.html";
+      // Redirect to home (trailing slash so document URL is /Frontend/ and assets resolve)
+      var path = window.location.pathname || "";
+      var base = path.substring(0, path.lastIndexOf("/") + 1) || "/Frontend/";
+      window.location.replace(base);
     } catch (err) {
       showError(err?.message || "Login failed.");
       disableForm(false);

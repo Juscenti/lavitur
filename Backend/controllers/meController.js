@@ -11,7 +11,10 @@ export async function getMe(req, res) {
       id: profile.id,
       email: profile.email,
       username: profile.username,
+      fullname: profile.full_name,
       full_name: profile.full_name,
+      phone: profile.phone || "",
+      bio: profile.bio || "",
       role: profile.role,
       status: profile.status,
       created_at: profile.created_at,
@@ -25,11 +28,15 @@ export async function getMe(req, res) {
 export async function updateMe(req, res) {
   try {
     const userId = req.userId;
-    const { username, full_name } = req.body;
+    const { username, fullname, full_name, phone, bio } = req.body;
 
     const updates = {};
     if (username !== undefined) updates.username = username;
+    // Handle both fullname and full_name to support frontend flexibility
+    if (fullname !== undefined) updates.full_name = fullname;
     if (full_name !== undefined) updates.full_name = full_name;
+    if (phone !== undefined) updates.phone = phone;
+    if (bio !== undefined) updates.bio = bio;
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: 'No fields to update' });

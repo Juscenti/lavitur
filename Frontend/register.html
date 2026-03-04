@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Register – Lavitúr</title>
+  <script src="js/base.js"></script>
   <link
     href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Urbanist:wght@400;700&display=swap"
     rel="stylesheet"
@@ -13,15 +14,8 @@
 </head>
 <body>
   <!-- Navbar Placeholder -->
-  <div id="navbar-placeholder"></div>
-  <script>
-    // Load navbar partial once
-    fetch('_partials/navbar.html')
-      .then(res => res.text())
-      .then(html => {
-        document.getElementById('navbar-placeholder').innerHTML = html;
-      });
-  </script>
+  <div id="navbar-placeholder" data-partial="simple-navbar"></div>
+  <script src="js/load-partial.js" defer></script>
 
   <section class="register-section">
     <div class="form-wrapper">

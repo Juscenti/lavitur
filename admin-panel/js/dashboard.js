@@ -4,15 +4,6 @@ import { requireStaff } from "./adminGuard.js";
 
 let myProfile = null;
 
-(async () => {
-  const loadingEl = document.getElementById("dashboard-loading");
-  const mainEl = document.getElementById("main");
-  myProfile = await requireStaff();
-  if (!myProfile) return;
-  if (loadingEl) loadingEl.style.display = "none";
-  if (mainEl) mainEl.style.display = "";
-})();
-
 function formatCurrency(n, currency = "JMD") {
   const v = Number(n ?? 0);
   try {
@@ -33,7 +24,16 @@ function loadComponent(path, selector) {
     .catch((err) => console.error("Failed to load " + path, err));
 }
 
-window.addEventListener("DOMContentLoaded", async () => {
+(async () => {
+  const loadingEl = document.getElementById("dashboard-loading");
+  const mainEl = document.getElementById("main");
+
+  myProfile = await requireStaff();
+  if (!myProfile) return;
+
+  if (loadingEl) loadingEl.style.display = "none";
+  if (mainEl) mainEl.style.display = "";
+
   await loadComponent("./components/sidebar.html", "#sidebar");
   await loadComponent("./components/header.html", "#topbar");
 
@@ -74,4 +74,4 @@ window.addEventListener("DOMContentLoaded", async () => {
       },
     });
   }
-});
+})();

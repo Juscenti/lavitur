@@ -2,12 +2,18 @@
  * Frontend API client — all data requests go to the REST API.
  * Auth (login/register/logout) stays with Supabase client; this uses the session token for API calls.
  */
-const API_BASE = typeof window !== 'undefined' && window.API_BASE ? window.API_BASE : '';
+const API_BASE = typeof window !== 'undefined' && window.API_BASE
+  ? window.API_BASE
+  : (typeof window !== 'undefined' ? 'http://localhost:5000' : '');
 
 async function getAccessToken() {
-  const { supabase } = await import('./supabaseClient.js');
-  const { data } = await supabase.auth.getSession();
-  return data?.session?.access_token ?? null;
+  try {
+    const { supabase } = await import('./supabaseClient.js');
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.access_token ?? null;
+  } catch (_) {
+    return null;
+  }
 }
 
 async function request(method, path, options = {}) {

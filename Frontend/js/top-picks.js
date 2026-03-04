@@ -27,13 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
   
     slideCount = topPicks.length;
   
-    // Navigation
+    // Navigation (slide width 280px + gap 24px)
+    const slideStep = 280 + 24;
     function showSlide(idx) {
       if (idx < 0) idx = slideCount - 1;
       if (idx >= slideCount) idx = 0;
       currentIndex = idx;
-      slidesContainer.style.transform = `translateX(-${idx * (250 + 2*16)}px)`; 
-      // 250 = slide width, 16px margin
+      slidesContainer.style.transform = `translateX(-${idx * slideStep}px)`;
     }
   
     document.querySelector('.top-picks .prev')

@@ -7,6 +7,18 @@
 
 ---
 
+## Use one server and one URL (avoids 404s and broken admin link)
+
+Use **one** way to open the site so links stay consistent:
+
+- Run **`npm run serve`** from the **lavitur** folder (serves the whole project on port 5501).
+- Always open the main site at **http://localhost:5501/Frontend/** (with trailing slash; capital **F**). If you use `/Frontend` without the slash, the page can load broken (404, missing CSS). The site will auto-redirect `/Frontend` → `/Frontend/` when possible.
+- Admin panel: **http://localhost:5501/admin-panel/index.html**.
+
+If you sometimes use Live Server from a different folder or a different port (e.g. 58504), the Admin Dashboard link and asset paths can break because the app expects to be served from the **project root** with both `/Frontend/` and `/admin-panel/` available.
+
+---
+
 ## Option 1: Static site (recommended – has all progress)
 
 1. **Start the Backend** (required for shop, profile, admin):

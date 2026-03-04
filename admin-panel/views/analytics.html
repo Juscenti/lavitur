@@ -1,7 +1,40 @@
-<script type="module">
-  import { requireAdminAuth } from '../js/auth.js';
-  requireAdminAuth();
-</script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <base href="/admin-panel/" />
+  <title>Admin — Analytics</title>
+  <link rel="stylesheet" href="../css/admin.css" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+</head>
+<body>
+  <div id="admin-container">
+    <aside id="sidebar"></aside>
+    <header id="topbar"></header>
 
-<script src="../js/analytics.js" type="module"></script>
-<meta http-equiv="Cache-Control" content="no-store" />
+    <main id="main">
+      <section class="panel">
+        <h1>Analytics</h1>
+        <div id="analytics-root">Loading analytics…</div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    fetch('../components/sidebar.html').then(r=>r.text()).then(html=>{document.getElementById('sidebar').innerHTML=html}).catch(()=>{});
+    fetch('../components/header.html').then(r=>r.text()).then(html=>{document.getElementById('topbar').innerHTML=html}).catch(()=>{});
+  </script>
+
+  <script type="module">
+    import { requireAdminAuth } from '../js/auth.js';
+    requireAdminAuth();
+  </script>
+
+  <script src="../js/analytics.js" type="module"></script>
+</body>
+</html>
+
+  <script src="../js/analytics.js" type="module"></script>
+</body>
+</html>

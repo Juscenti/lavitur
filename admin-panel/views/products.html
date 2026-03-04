@@ -22,6 +22,24 @@
     
     <!-- Viewer Mode -->
     <section id="viewerModeSection">
+      <div class="viewer-filters" id="viewerFilters">
+        <div class="viewer-filter-group">
+          <label for="viewerFilterStatus">Status</label>
+          <select id="viewerFilterStatus" class="viewer-filter-select" aria-label="Filter by status">
+            <option value="">All</option>
+            <option value="published">Published</option>
+            <option value="unpublished">Unpublished</option>
+          </select>
+        </div>
+        <div class="viewer-filter-group">
+          <label for="viewerFilterCategory">Category</label>
+          <select id="viewerFilterCategory" class="viewer-filter-select" aria-label="Filter by category">
+            <option value="">All</option>
+            <!-- JS populates from product categories -->
+          </select>
+        </div>
+        <button type="button" class="viewer-filter-clear" id="viewerFilterClear">Clear filters</button>
+      </div>
       <table>
         <thead>
           <tr>
@@ -91,8 +109,18 @@
         </div>
 
         <div class="pfield">
-          <label for="productCategorySelect">Category</label>
-          <select id="productCategorySelect" name="categoryName"></select>
+          <label for="productMainCategory">Main category</label>
+          <select id="productMainCategory" name="mainCategory" required>
+            <option value="">— Select —</option>
+            <!-- JS populates Men's Wear, Women's Wear, Unisex -->
+          </select>
+        </div>
+        <div class="pfield">
+          <label for="productSubCategories">Sub-categories (add-ons)</label>
+          <select id="productSubCategories" multiple class="category-multiselect">
+            <!-- JS populates all other categories -->
+          </select>
+          <span class="pfield-hint">Hold Ctrl/Cmd to select multiple. Optional.</span>
         </div>
 
         <div class="pmodal__footer">

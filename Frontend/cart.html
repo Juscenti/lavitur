@@ -4,7 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Your Cart – Lavitúr</title>
-
+  <script>
+    (function() {
+      var p = window.location.pathname;
+      if (p === '/Frontend' || p === '/frontend') { window.location.replace('/Frontend/'); return; }
+      if (p.startsWith('/Frontend') || p.startsWith('/frontend')) {
+        var base = document.createElement('base');
+        base.href = '/Frontend/';
+        document.head.insertBefore(base, document.head.firstChild);
+      }
+    })();
+  </script>
   <!-- Fonts & Icons -->
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;700&display=swap" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
@@ -14,7 +24,6 @@
   <link rel="stylesheet" href="css/cart.css" />
 
   <!-- JS -->
-  <script defer src="js/navbar.js"></script>
   <script defer src="js/cart.js"></script>
 </head>
 <body class="cart-page">
@@ -22,7 +31,7 @@
   <!-- Navbar -->
   <div id="navbar-placeholder"></div>
   <script>
-    fetch('_partials/navbar.html')
+    fetch('_partials/simple-navbar.html')
       .then(r => r.text())
       .then(html => document.getElementById('navbar-placeholder').innerHTML = html);
   </script>
