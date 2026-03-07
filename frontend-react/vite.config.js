@@ -1,10 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// In dev, /api is proxied to your local Backend so cart, wishlist, and reviews work.
-// Run the Backend: cd Backend && npm run dev (port 5000)
-// To use the deployed Render API instead, set VITE_PROXY_TARGET=https://lavitur.onrender.com
-const proxyTarget = process.env.VITE_PROXY_TARGET || 'http://localhost:5000';
+// In dev, /api is proxied to the deployed Render API so products, profile, settings all work.
+// For local cart/wishlist/reviews: run Backend (npm run dev in Backend/) then:
+//   VITE_PROXY_TARGET=http://localhost:5000 npm run dev
+const proxyTarget = process.env.VITE_PROXY_TARGET || 'https://lavitur.onrender.com';
 
 export default defineConfig({
   plugins: [react()],
