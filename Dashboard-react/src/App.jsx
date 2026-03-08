@@ -4,6 +4,7 @@ import AdminLayout from './components/AdminLayout';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import Orders from './pages/Orders';
+import OrderDetail from './pages/OrderDetail';
 import Products from './pages/Products';
 import Content from './pages/Content';
 import Support from './pages/Support';
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="users" element={<Users />} />
         <Route path="products" element={<Products />} />
         <Route path="orders" element={<Orders />} />
+        <Route path="orders/:orderId" element={<OrderDetail />} />
         <Route path="content" element={<Content />} />
         <Route path="support" element={<Support />} />
         <Route path="analytics" element={<Analytics />} />

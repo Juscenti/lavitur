@@ -19,6 +19,7 @@ const routeTitles = {
 
 function getTitle(pathname) {
   if (routeTitles[pathname]) return routeTitles[pathname];
+  if (pathname.startsWith('/orders/') && pathname !== '/orders') return 'Order detail';
   for (const [path, title] of Object.entries(routeTitles)) {
     if (path !== '/' && pathname.startsWith(path)) return title;
   }

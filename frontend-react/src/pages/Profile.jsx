@@ -77,19 +77,28 @@ function WishlistSection({ items }) {
   );
 }
 
+function formatAddressLine(addr) {
+  const parts = [
+    addr.address_line1,
+    addr.address_line2,
+    [addr.city, addr.parish, addr.postal_code].filter(Boolean).join(', '),
+    addr.country,
+  ].filter(Boolean);
+  return parts.join(' · ');
+}
+
 function AddressesSection({ addresses }) {
   if (!addresses) return <div className="pf-loading">Loading your addresses…</div>;
   if (addresses.length === 0) return <EmptyState icon="fa-map-marker-alt" title="No Saved Addresses" message="Add an address in settings to save it for faster checkout." />;
   return (
     <div className="pf-addresses">
-      {addresses.map((addr, i) => (
-        <div key={i} className="pf-address-card">
-          <div className="pf-address-type">{addr.type || 'Address'}</div>
+      {addresses.map((addr) => (
+        <div key={addr.id} className="pf-address-card">
+          {addr.is_default && <span className="pf-address-badge">Default</span>}
+          {addr.label && <div className="pf-address-type">{addr.label}</div>}
           <p>
-            <strong>{addr.name}</strong><br />
-            {addr.street}<br />
-            {addr.city}, {addr.state} {addr.zip}<br />
-            {addr.country}
+            <strong>{addr.full_name}</strong><br />
+            {formatAddressLine(addr)}
           </p>
           {addr.phone && <p className="pf-address-phone">{addr.phone}</p>}
         </div>

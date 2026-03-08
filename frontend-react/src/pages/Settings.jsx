@@ -2,7 +2,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
+import { COUNTRY_LIST } from '../data/countries';
 import '../styles/settings.css';
+
+function formatAddress(addr) {
+  const parts = [
+    addr.address_line1,
+    addr.address_line2,
+    [addr.city, addr.parish, addr.postal_code].filter(Boolean).join(', '),
+    addr.country,
+  ].filter(Boolean);
+  return parts.join(' · ');
+}
 
 const SECTIONS = [
   { id: 'preferences', label: 'Preferences', icon: 'fas fa-sliders-h' },
@@ -62,6 +73,24 @@ export default function Settings() {
   const [pwStrength, setPwStrength] = useState('');
   const [orderPrefs, setOrderPrefs] = useState({ giftWrapping: false, signatureRequired: false, carrier: '', deliveryInstructions: '', returnMethod: 'original' });
 
+  const [addresses, setAddresses] = useState([]);
+  const [addressesLoading, setAddressesLoading] = useState(false);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState(null);
+  const [addressForm, setAddressForm] = useState({
+    label: '',
+    full_name: '',
+    phone: '',
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    parish: '',
+    postal_code: '',
+    country: '',
+    is_default: false,
+  });
+  const [addressSubmitError, setAddressSubmitError] = useState('');
+
   const showToast = useCallback((msg, type = 'success') => setToast({ msg, type }), []);
   const hideToast = useCallback(() => setToast(null), []);
 
@@ -96,6 +125,18 @@ export default function Settings() {
   useEffect(() => {
     setActiveSection(SECTIONS.find((s) => s.id === hashSection)?.id ?? 'preferences');
   }, [hashSection]);
+
+  const fetchAddresses = useCallback(() => {
+    setAddressesLoading(true);
+    api.get('/me/addresses')
+      .then((data) => setAddresses(Array.isArray(data) ? data : []))
+      .catch(() => setAddresses([]))
+      .finally(() => setAddressesLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'addresses' && session) fetchAddresses();
+  }, [activeSection, session, fetchAddresses]);
 
   const calcStrength = (pw) => {
     if (!pw) return '';
@@ -143,6 +184,114 @@ export default function Settings() {
       onConfirm: () => {
         setModal(null);
         showToast('Account deletion requested.', 'info');
+      },
+    });
+  };
+
+  const openAddAddressForm = () => {
+    setEditingAddressId(null);
+    setAddressForm({
+      label: '',
+      full_name: profile?.full_name || user?.user_metadata?.full_name || '',
+      phone: '',
+      address_line1: '',
+      address_line2: '',
+      city: '',
+      parish: '',
+      postal_code: '',
+      country: '',
+      is_default: addresses.length === 0,
+    });
+    setAddressSubmitError('');
+    setShowAddressForm(true);
+  };
+
+  const openEditAddressForm = (addr) => {
+    setEditingAddressId(addr.id);
+    setAddressForm({
+      label: addr.label || '',
+      full_name: addr.full_name || '',
+      phone: addr.phone || '',
+      address_line1: addr.address_line1 || '',
+      address_line2: addr.address_line2 || '',
+      city: addr.city || '',
+      parish: addr.parish || '',
+      postal_code: addr.postal_code || '',
+      country: addr.country || '',
+      is_default: Boolean(addr.is_default),
+    });
+    setAddressSubmitError('');
+    setShowAddressForm(true);
+  };
+
+  const closeAddressForm = () => {
+    setShowAddressForm(false);
+    setEditingAddressId(null);
+    setAddressSubmitError('');
+  };
+
+  const handleAddressFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setAddressForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  };
+
+  const handleAddressSubmit = async (e) => {
+    e.preventDefault();
+    setAddressSubmitError('');
+    if (!addressForm.full_name?.trim() || !addressForm.address_line1?.trim()) {
+      setAddressSubmitError('Please fill in full name and address line 1.');
+      return;
+    }
+    try {
+      const payload = {
+        full_name: addressForm.full_name.trim(),
+        phone: addressForm.phone?.trim() || undefined,
+        address_line1: addressForm.address_line1.trim(),
+        address_line2: addressForm.address_line2?.trim() || undefined,
+        city: addressForm.city?.trim() || undefined,
+        parish: addressForm.parish?.trim() || undefined,
+        postal_code: addressForm.postal_code?.trim() || undefined,
+        country: addressForm.country?.trim() || undefined,
+        is_default: addressForm.is_default,
+      };
+      if (addressForm.label?.trim()) payload.label = addressForm.label.trim();
+      if (editingAddressId) {
+        await api.patch(`/me/addresses/${editingAddressId}`, payload);
+        showToast('Address updated.', 'success');
+      } else {
+        await api.post('/me/addresses', payload);
+        showToast('Address added.', 'success');
+      }
+      closeAddressForm();
+      fetchAddresses();
+    } catch (err) {
+      setAddressSubmitError(err?.data?.error || err?.message || 'Failed to save address.');
+    }
+  };
+
+  const handleSetDefaultAddress = async (id) => {
+    try {
+      await api.patch(`/me/addresses/${id}/default`);
+      setAddresses((prev) => prev.map((a) => ({ ...a, is_default: a.id === id })));
+      showToast('Default address updated.', 'success');
+    } catch (_) {
+      showToast('Could not set default address.', 'error');
+    }
+  };
+
+  const handleDeleteAddress = (addr) => {
+    setModal({
+      title: 'Delete Address',
+      message: `Remove "${addr.address_line1}" from your saved addresses?`,
+      onConfirm: async () => {
+        setModal(null);
+        try {
+          await api.delete(`/me/addresses/${addr.id}`);
+          setAddresses((prev) => prev.filter((a) => a.id !== addr.id));
+          showToast('Address removed.', 'success');
+        } catch (_) {
+          showToast('Could not delete address.', 'error');
+        }
       },
     });
   };
@@ -326,16 +475,108 @@ export default function Settings() {
                     </div>
                   </div>
                 </div>
-                <div className="addresses-container">
-                  <div className="addresses-list">
-                    <p className="empty-state">No saved addresses yet. Add one for faster checkout.</p>
-                  </div>
-                </div>
-                <div className="form-actions">
-                  <button type="button" className="btn btn-primary" onClick={() => showToast('Add address feature coming soon!', 'info')}>
-                    <i className="fas fa-plus" /> Add New Address
-                  </button>
-                </div>
+
+                {addressesLoading ? (
+                  <p className="empty-state">Loading addresses…</p>
+                ) : showAddressForm ? (
+                  <form className="settings-form address-form" onSubmit={handleAddressSubmit}>
+                    <h4>{editingAddressId ? 'Edit address' : 'Add new address'}</h4>
+                    <div className="address-form-grid">
+                      <div className="form-group">
+                        <label htmlFor="addr-label">Label (optional)</label>
+                        <input id="addr-label" name="label" type="text" value={addressForm.label} onChange={handleAddressFormChange} placeholder="e.g. Home, Work" />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="addr-full_name">Full name *</label>
+                        <input id="addr-full_name" name="full_name" type="text" required value={addressForm.full_name} onChange={handleAddressFormChange} placeholder="Jane Doe" />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="addr-phone">Phone</label>
+                        <input id="addr-phone" name="phone" type="tel" value={addressForm.phone} onChange={handleAddressFormChange} placeholder="+1 876 000 0000" />
+                      </div>
+                      <div className="form-group full-width">
+                        <label htmlFor="addr-address_line1">Address line 1 *</label>
+                        <input id="addr-address_line1" name="address_line1" type="text" required value={addressForm.address_line1} onChange={handleAddressFormChange} placeholder="Street address" />
+                      </div>
+                      <div className="form-group full-width">
+                        <label htmlFor="addr-address_line2">Address line 2</label>
+                        <input id="addr-address_line2" name="address_line2" type="text" value={addressForm.address_line2} onChange={handleAddressFormChange} placeholder="Apt, suite, etc." />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="addr-city">City</label>
+                        <input id="addr-city" name="city" type="text" value={addressForm.city} onChange={handleAddressFormChange} placeholder="City" />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="addr-parish">State / Parish / Region</label>
+                        <input id="addr-parish" name="parish" type="text" value={addressForm.parish} onChange={handleAddressFormChange} placeholder="e.g. St. Andrew" />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="addr-postal_code">Postal code</label>
+                        <input id="addr-postal_code" name="postal_code" type="text" value={addressForm.postal_code} onChange={handleAddressFormChange} placeholder="Postal code" />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="addr-country">Country</label>
+                        <select id="addr-country" name="country" value={addressForm.country} onChange={handleAddressFormChange}>
+                          <option value="">Select country</option>
+                          {COUNTRY_LIST.map((c) => (
+                            <option key={c.code} value={c.name}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group checkbox-group full-width">
+                        <label className="checkbox-label">
+                          <input type="checkbox" name="is_default" checked={addressForm.is_default} onChange={handleAddressFormChange} />
+                          <span className="checkbox-content">Set as default address</span>
+                        </label>
+                      </div>
+                    </div>
+                    {addressSubmitError && <p className="form-error" role="alert">{addressSubmitError}</p>}
+                    <div className="form-actions">
+                      <button type="submit" className="btn btn-primary"><i className="fas fa-check" /> {editingAddressId ? 'Update address' : 'Add address'}</button>
+                      <button type="button" className="btn btn-secondary" onClick={closeAddressForm}>Cancel</button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <div className="addresses-container">
+                      <div className="addresses-list">
+                        {addresses.length === 0 ? (
+                          <p className="empty-state">No saved addresses yet. Add one for faster checkout.</p>
+                        ) : (
+                          addresses.map((addr) => (
+                            <div key={addr.id} className={`address-card ${addr.is_default ? 'default' : ''}`}>
+                              {addr.is_default && <span className="address-default-badge">Default</span>}
+                              <div className="address-info">
+                                {addr.label && <div className="address-label">{addr.label}</div>}
+                                <div className="address-name">{addr.full_name}</div>
+                                <div className="address-text">{formatAddress(addr)}</div>
+                                {addr.phone && <div className="address-text">{addr.phone}</div>}
+                              </div>
+                              <div className="address-actions">
+                                {!addr.is_default && (
+                                  <button type="button" className="btn btn-outline btn-sm" onClick={() => handleSetDefaultAddress(addr.id)}>
+                                    Set as default
+                                  </button>
+                                )}
+                                <button type="button" className="btn btn-outline btn-sm" onClick={() => openEditAddressForm(addr)}>
+                                  Edit
+                                </button>
+                                <button type="button" className="btn btn-outline btn-sm" onClick={() => handleDeleteAddress(addr)}>
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                    <div className="form-actions">
+                      <button type="button" className="btn btn-primary" onClick={openAddAddressForm}>
+                        <i className="fas fa-plus" /> Add New Address
+                      </button>
+                    </div>
+                  </>
+                )}
               </section>
             )}
 

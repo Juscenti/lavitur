@@ -636,6 +636,20 @@ input:not([disabled]):focus {
   border: 1.5px solid #f0f0f0;
   border-radius: 10px;
   padding: 1.25rem;
+  position: relative;
+}
+
+.pf-address-badge {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: #a67c52;
+  color: #fff;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
 .pf-address-type {

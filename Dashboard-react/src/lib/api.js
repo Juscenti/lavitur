@@ -2,18 +2,7 @@ import { supabase } from './supabase.js';
 
 const RENDER_API_URL = 'https://lavitur.onrender.com';
 
-const getDefaultApiBase = () => {
-  if (typeof window === 'undefined') return RENDER_API_URL;
-  // In dev, use same origin so Vite proxy handles /api → no CORS, auth header is sent
-  if (import.meta.env.DEV) return '';
-  if (import.meta.env.VITE_API_BASE) return import.meta.env.VITE_API_BASE;
-  if (window.API_BASE) return window.API_BASE;
-  const useLocal = import.meta.env.VITE_USE_LOCAL_API === '1' || (typeof localStorage !== 'undefined' && localStorage.getItem('lavitur_use_local_api') === '1');
-  const isLocal = /^localhost$|^127\.0\.0\.1$/i.test(window.location.hostname);
-  return (isLocal && useLocal) ? 'http://localhost:5000' : RENDER_API_URL;
-};
-
-const API_BASE = getDefaultApiBase();
+const API_BASE = import.meta.env.VITE_API_BASE || RENDER_API_URL;
 const TOKEN_KEY = 'adminToken';
 
 async function getToken() {
@@ -43,12 +32,21 @@ async function request(method, path, options = {}) {
       credentials = new URL(url).origin !== window.location.origin ? 'include' : 'same-origin';
     } catch (_) {}
   }
-  const res = await fetch(url, {
-    method,
-    headers,
-    credentials,
-    ...options,
-  });
+  let res;
+  try {
+    res = await fetch(url, {
+      method,
+      headers,
+      credentials,
+      ...options,
+    });
+  } catch (networkErr) {
+    const isNetworkError = networkErr?.name === 'TypeError' || networkErr?.message === 'Failed to fetch';
+    const err = new Error(networkErr?.message || 'Network error');
+    err.status = 0;
+    err.data = null;
+    throw err;
+  }
 
   const text = await res.text();
   let data = null;
@@ -77,12 +75,21 @@ async function requestMultipart(method, path, formData) {
       credentials = new URL(url).origin !== window.location.origin ? 'include' : 'same-origin';
     } catch (_) {}
   }
-  const res = await fetch(url, {
-    method,
-    headers,
-    credentials,
-    body: formData,
-  });
+  let res;
+  try {
+    res = await fetch(url, {
+      method,
+      headers,
+      credentials,
+      body: formData,
+    });
+  } catch (networkErr) {
+    const isNetworkError = networkErr?.name === 'TypeError' || networkErr?.message === 'Failed to fetch';
+    const err = new Error(networkErr?.message || 'Network error');
+    err.status = 0;
+    err.data = null;
+    throw err;
+  }
 
   const text = await res.text();
   let data = null;

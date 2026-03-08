@@ -967,6 +967,57 @@
   color: #a67c52;
 }
 
+.address-label {
+  font-size: 0.8rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+/* Address form (add/edit) — same layout as checkout */
+.address-form {
+  margin-bottom: 1.5rem;
+}
+.address-form h4 {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+.address-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.address-form-grid .full-width {
+  grid-column: 1 / -1;
+}
+.address-form-grid .form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+.address-form-grid .form-group input,
+.address-form-grid .form-group select {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+.settings-section .form-error {
+  color: #b91c1c;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .address-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Subscription Section */
 .membership-info {
   display: grid;

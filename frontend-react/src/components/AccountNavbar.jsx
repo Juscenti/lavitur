@@ -20,7 +20,7 @@ export default function AccountNavbar() {
     navigate('/');
   };
 
-  const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'http://localhost:3002';
+  const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'https://lavitur-dashboard.onrender.com';
   const handleOpenDashboard = async (e) => {
     e.preventDefault();
     setDropdownOpen(false);

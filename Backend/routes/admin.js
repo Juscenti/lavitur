@@ -46,6 +46,7 @@ router.patch('/products/:id/media/:mediaId/primary', setPrimaryMedia);
 
 // Orders
 router.get('/orders', adminOrders.listOrders);
+router.get('/orders/:id', adminOrders.getOrder);
 router.patch('/orders/:id/status', adminOrders.updateOrderStatus);
 
 // Dashboard

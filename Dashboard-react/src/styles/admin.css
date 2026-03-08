@@ -349,6 +349,243 @@ body {
   box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.15);
 }
 
+/* Orders page: customer, shipping, items */
+.orders-table .order-id,
+.orders-table .order-id-link {
+  font-family: var(--admin-mono, ui-monospace, monospace);
+  font-size: 0.85em;
+}
+.orders-table .order-id-link {
+  color: var(--admin-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+.orders-table .order-id-link:hover {
+  text-decoration: underline;
+}
+.orders-table .order-view-link {
+  font-size: 0.85rem;
+  color: var(--admin-primary);
+  text-decoration: none;
+}
+.orders-table .order-view-link:hover {
+  text-decoration: underline;
+}
+.orders-table .order-id {
+  color: var(--admin-text-muted);
+}
+.orders-table .order-customer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.orders-table .order-customer small {
+  font-size: 0.8rem;
+  color: var(--admin-text-muted);
+}
+.orders-table .order-shipping {
+  max-width: 180px;
+  font-size: 0.9rem;
+  color: var(--admin-text-muted);
+}
+.orders-table .order-items-toggle {
+  background: none;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--admin-primary);
+  transition: background var(--admin-transition), border-color var(--admin-transition);
+}
+.orders-table .order-items-toggle:hover {
+  background: var(--admin-primary-subtle);
+  border-color: var(--admin-primary);
+}
+.orders-table .order-status {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--admin-radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+.orders-table .order-status--paid,
+.orders-table .order-status--shipped,
+.orders-table .order-status--delivered {
+  background: rgba(34, 139, 34, 0.15);
+  color: #1a6b1a;
+}
+.orders-table .order-status--processing {
+  background: rgba(47, 107, 255, 0.15);
+  color: var(--admin-primary);
+}
+.orders-table .order-status--pending_payment {
+  background: rgba(180, 120, 0, 0.15);
+  color: #8b6914;
+}
+.orders-table .order-status--cancelled,
+.orders-table .order-status--refunded {
+  background: rgba(140, 40, 40, 0.12);
+  color: #8b2828;
+}
+.orders-table .order-detail-row td {
+  padding: 0.5rem 1rem 1rem;
+  background: var(--admin-surface-hover);
+  border-bottom: 1px solid var(--admin-border);
+  vertical-align: top;
+}
+.orders-table .order-items-detail {
+  margin-left: 1.5rem;
+  overflow-x: auto;
+}
+.orders-table .order-items-detail table {
+  width: 100%;
+  min-width: 320px;
+  font-size: 0.9rem;
+  border-collapse: collapse;
+}
+.orders-table .order-items-detail th,
+.orders-table .order-items-detail td {
+  padding: 0.4rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--admin-border);
+}
+.orders-table .order-items-detail thead th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--admin-text-muted);
+}
+
+/* ===== Order detail page (full single order) ===== */
+.panel-muted {
+  color: var(--admin-text-muted);
+  margin: 0;
+}
+.order-detail-panel {
+  max-width: 900px;
+}
+.order-detail-header {
+  margin-bottom: 1.5rem;
+}
+.order-detail-back {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  padding: 0.4rem 0;
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  color: var(--admin-primary);
+  cursor: pointer;
+  font-family: var(--admin-font);
+}
+.order-detail-back:hover {
+  text-decoration: underline;
+}
+.order-detail-header h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+}
+.order-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: var(--admin-text-muted);
+}
+.order-detail-total {
+  font-weight: 700;
+  color: var(--admin-text);
+}
+.order-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.order-detail-block {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  padding: 1.25rem;
+}
+.order-detail-block h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--admin-text-muted);
+}
+.order-detail-block dl {
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.order-detail-block dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--admin-text-muted);
+  font-weight: 600;
+}
+.order-detail-block dd {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.order-detail-address {
+  font-style: normal;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+.order-detail-notes {
+  margin: 0;
+  font-size: 0.95rem;
+  white-space: pre-wrap;
+}
+.order-detail-items-block .table-container {
+  margin-top: 0.75rem;
+}
+.order-detail-items-source {
+  font-size: 0.8rem;
+  color: var(--admin-text-muted);
+  margin: 0 0 0.5rem;
+}
+.order-detail-items-source code {
+  font-family: var(--admin-mono, ui-monospace, monospace);
+  font-size: 0.9em;
+}
+.order-detail-status-block .orderStatus {
+  margin-top: 0.25rem;
+}
+.order-detail-panel .order-status {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--admin-radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+.order-detail-panel .order-status--paid,
+.order-detail-panel .order-status--shipped,
+.order-detail-panel .order-status--delivered {
+  background: rgba(34, 139, 34, 0.15);
+  color: #1a6b1a;
+}
+.order-detail-panel .order-status--processing {
+  background: rgba(47, 107, 255, 0.15);
+  color: var(--admin-primary);
+}
+.order-detail-panel .order-status--pending_payment {
+  background: rgba(180, 120, 0, 0.15);
+  color: #8b6914;
+}
+.order-detail-panel .order-status--cancelled,
+.order-detail-panel .order-status--refunded {
+  background: rgba(140, 40, 40, 0.12);
+  color: #8b2828;
+}
+
 /* ===== Placeholder / loading blocks in panels ===== */
 #analytics-root,
 #content-editor,

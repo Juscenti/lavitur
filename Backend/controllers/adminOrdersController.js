@@ -1,18 +1,125 @@
 // Backend/controllers/adminOrdersController.js
 import { supabaseAdmin } from '../config/supabase.js';
 
+// Full select when your orders table has migration columns (customer_*, shipping_*, notes, shipping JSONB)
+const ORDER_SELECT_FULL = `
+  id,
+  status,
+  total,
+  currency,
+  created_at,
+  updated_at,
+  user_id,
+  customer_name,
+  customer_email,
+  shipping_name,
+  shipping_phone,
+  shipping_address_line1,
+  shipping_address_line2,
+  shipping_city,
+  shipping_parish,
+  shipping_country,
+  shipping_postal,
+  notes,
+  shipping,
+  order_items (
+    id,
+    product_title,
+    quantity,
+    unit_price,
+    line_total
+  )
+`;
+
+// Minimal select that works even without migration columns (core + order_items only)
+const ORDER_SELECT_MINIMAL = `
+  id,
+  status,
+  total,
+  currency,
+  created_at,
+  updated_at,
+  user_id,
+  order_items (
+    id,
+    product_title,
+    quantity,
+    unit_price,
+    line_total
+  )
+`;
+
+function normalizeOrder(o) {
+  return {
+    ...o,
+    order_items: Array.isArray(o?.order_items) ? o.order_items : [],
+  };
+}
+
 export async function listOrders(req, res) {
   try {
-    const { data, error } = await supabaseAdmin
+    let data = null;
+    let error = null;
+    const { data: fullData, error: fullError } = await supabaseAdmin
       .from('orders')
-      .select('id, status, total, currency, created_at, updated_at, user_id')
+      .select(ORDER_SELECT_FULL)
       .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    res.json(data || []);
+    if (fullError) {
+      const isColumnError = fullError.code === '42703' || /column .* does not exist/i.test(fullError.message || '');
+      if (isColumnError) {
+        const { data: minData, error: minError } = await supabaseAdmin
+          .from('orders')
+          .select(ORDER_SELECT_MINIMAL)
+          .order('created_at', { ascending: false });
+        if (minError) throw minError;
+        data = minData;
+      } else {
+        throw fullError;
+      }
+    } else {
+      data = fullData;
+    }
+    res.json((data || []).map(normalizeOrder));
   } catch (err) {
     console.error('listOrders:', err);
     res.status(500).json({ error: err.message || 'Failed to fetch orders' });
+  }
+}
+
+export async function getOrder(req, res) {
+  try {
+    const { id } = req.params;
+    let data = null;
+    let error = null;
+    const { data: fullData, error: fullError } = await supabaseAdmin
+      .from('orders')
+      .select(ORDER_SELECT_FULL)
+      .eq('id', id)
+      .single();
+    if (fullError) {
+      if (fullError.code === 'PGRST116') return res.status(404).json({ error: 'Order not found' });
+      const isColumnError = fullError.code === '42703' || /column .* does not exist/i.test(fullError.message || '');
+      if (isColumnError) {
+        const { data: minData, error: minError } = await supabaseAdmin
+          .from('orders')
+          .select(ORDER_SELECT_MINIMAL)
+          .eq('id', id)
+          .single();
+        if (minError) {
+          if (minError.code === 'PGRST116') return res.status(404).json({ error: 'Order not found' });
+          throw minError;
+        }
+        data = minData;
+      } else {
+        throw fullError;
+      }
+    } else {
+      data = fullData;
+    }
+    res.json(normalizeOrder(data));
+  } catch (err) {
+    console.error('getOrder:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch order' });
   }
 }
 
