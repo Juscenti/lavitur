@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import '../styles/account-navbar.css';
 
 export default function AccountNavbar() {
-  const { signOut } = useAuth();
+  const { user, signOut, profile } = useAuth();
   const location = useLocation();
+  const isStaff = profile?.role === 'admin' || profile?.role === 'representative';
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -16,6 +18,19 @@ export default function AccountNavbar() {
     setDropdownOpen(false);
     await signOut();
     navigate('/');
+  };
+
+  const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'http://localhost:3002';
+  const handleOpenDashboard = async (e) => {
+    e.preventDefault();
+    setDropdownOpen(false);
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.access_token && data?.session?.refresh_token) {
+      const hash = `#access_token=${encodeURIComponent(data.session.access_token)}&refresh_token=${encodeURIComponent(data.session.refresh_token)}`;
+      window.location.href = dashboardUrl + hash;
+    } else {
+      window.location.href = dashboardUrl;
+    }
   };
 
   return (
@@ -73,7 +88,17 @@ export default function AccountNavbar() {
                   onClick={() => setDropdownOpen(false)}
                 />
                 <div className="acct-nav-dropdown show">
-                  <a href="#" onClick={handleSignOut}>Sign Out</a>
+                  {user && (
+                    <>
+                      {isStaff && (
+                        <a href={dashboardUrl} onClick={handleOpenDashboard}>Admin Dashboard</a>
+                      )}
+                      <a href="#" onClick={handleSignOut}>Sign Out</a>
+                    </>
+                  )}
+                  {!user && (
+                    <Link to="/login" onClick={() => setDropdownOpen(false)}>Login / Register</Link>
+                  )}
                 </div>
               </>
             )}

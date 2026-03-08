@@ -14,6 +14,7 @@ import {
   updateCartItem,
   removeCartItem,
 } from '../controllers/meCartController.js';
+import { createOrder } from '../controllers/meOrdersController.js';
 
 const router = express.Router();
 router.use(verifySupabaseToken);
@@ -33,5 +34,8 @@ router.get('/cart', getCart);
 router.post('/cart', addCartItem);
 router.patch('/cart/:id', updateCartItem);
 router.delete('/cart/:id', removeCartItem);
+
+// Orders
+router.post('/orders', createOrder);
 
 export default router;

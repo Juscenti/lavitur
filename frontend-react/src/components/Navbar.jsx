@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import '../styles/navbar.css';
 
 export default function Navbar() {
@@ -46,6 +47,18 @@ export default function Navbar() {
   const handleSignOut = (e) => {
     e.preventDefault();
     signOut();
+  };
+
+  const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'http://localhost:3002';
+  const handleOpenDashboard = async (e) => {
+    e.preventDefault();
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.access_token && data?.session?.refresh_token) {
+      const hash = `#access_token=${encodeURIComponent(data.session.access_token)}&refresh_token=${encodeURIComponent(data.session.refresh_token)}`;
+      window.location.href = dashboardUrl + hash;
+    } else {
+      window.location.href = dashboardUrl;
+    }
   };
 
   return (
@@ -121,7 +134,11 @@ export default function Navbar() {
             <ul className="dropdown-menu">
               {user ? (
                 <>
-                  {isStaff && <li><a href="/admin-panel/index.html">Admin Dashboard</a></li>}
+                  {isStaff && (
+                    <li>
+                      <a href={dashboardUrl} onClick={handleOpenDashboard}>Admin Dashboard</a>
+                    </li>
+                  )}
                   <li><Link to="/profile">Profile</Link></li>
                   <li><Link to="/settings">Settings</Link></li>
                   <li><a href="#" onClick={handleSignOut}>Log Out</a></li>
@@ -179,6 +196,11 @@ export default function Navbar() {
             <li><Link to={user ? "/cart" : "/login"}>Cart</Link></li>
             {user ? (
               <>
+                {isStaff && (
+                  <li>
+                    <a href={dashboardUrl} onClick={handleOpenDashboard}>Admin Dashboard</a>
+                  </li>
+                )}
                 <li><Link to="/profile">Profile</Link></li>
                 <li><Link to="/settings">Settings</Link></li>
                 <li><a href="#" onClick={handleSignOut}>Log Out</a></li>

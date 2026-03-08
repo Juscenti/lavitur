@@ -24,6 +24,9 @@ async function request(method, path, options = {}) {
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch (_) {}
   if (!res.ok) {
+    if (res.status === 401) {
+      supabase.auth.signOut();
+    }
     const err = new Error(data?.error || res.statusText || 'Request failed');
     err.status = res.status;
     err.data = data;

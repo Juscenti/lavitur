@@ -41,20 +41,32 @@ If you sometimes use Live Server from a different folder or a different port (e.
 
 ---
 
-## Option 2: React app
+## Option 2: React app (frontend-react)
 
-1. **Start the Backend** (same as above):
-   ```bash
-   npm run backend
-   ```
+The React app uses the **deployed API on Render** by default (no local backend needed for products, profile, settings). Cart/wishlist/reviews need the backend; use Render after you’ve pushed the Backend code.
 
-2. **Start the React app:**
+1. **Start the React app:**
    ```bash
    npm run react
    ```
-   Vite runs on **http://localhost:3000** and proxies `/api` to the Backend.
+   Vite runs on **http://localhost:3001** and proxies `/api` to **https://lavitur.onrender.com**.
 
-3. Open **http://localhost:3000** in the browser.
+2. Open **http://localhost:3001** in the browser.
+
+3. **Admin panel (when you need it):** In a **second terminal**, run:
+   ```bash
+   npm run admin
+   ```
+   Admin is served at **http://localhost:5502**. The “Admin Dashboard” link in the React app (Profile/nav dropdown for staff) opens that URL in a new tab. The admin panel talks to the same Render API (or set `localStorage.lavitur_use_production_api = '1'` in the admin tab if it’s using a different API base).
+
+4. **Optional – local backend** (e.g. for cart/wishlist without deploying):
+   ```bash
+   npm run backend
+   ```
+   Then start the React app with:
+   ```bash
+   VITE_PROXY_TARGET=http://localhost:5000 npm run react
+   ```
 
 ---
 
@@ -63,8 +75,10 @@ If you sometimes use Live Server from a different folder or a different port (e.
 | What you want | Command | URL |
 |---------------|---------|-----|
 | Static site (all progress) | `npm run serve` | http://localhost:5501/Frontend/index.html |
-| Admin panel | (after `npm run serve`) | http://localhost:5501/admin-panel/index.html |
-| React app | `npm run react` | http://localhost:3000 |
-| API | `npm run backend` | http://localhost:5000 |
+| Admin panel (with static site) | (after `npm run serve`) | http://localhost:5501/admin-panel/index.html |
+| **React app** | `npm run react` | http://localhost:3001 |
+| **Admin panel (with React)** | `npm run admin` (separate terminal) | http://localhost:5502 |
+| API (local) | `npm run backend` | http://localhost:5000 |
+| API (deployed) | — | https://lavitur.onrender.com |
 
-Always run the **Backend** when using the shop, profile, or admin.
+With the React app, the backend can stay on Render; run the backend locally only if you need to test cart/wishlist against local code.

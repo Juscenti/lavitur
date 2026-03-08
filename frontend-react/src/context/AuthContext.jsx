@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 const AuthContext = createContext(null);
 
@@ -11,7 +12,10 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) fetchProfile(session.user.id);
+      if (session) {
+        fetchProfile(session.user.id);
+        api.get('/me').catch(() => {});
+      }
       setLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -19,7 +23,18 @@ export function AuthProvider({ children }) {
       if (session) fetchProfile(session.user.id);
       else setProfile(null);
     });
-    return () => subscription?.unsubscribe();
+
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      supabase.auth.getSession().then(({ data: { session: s } }) => {
+        if (s) api.get('/me').catch(() => {});
+      });
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      subscription?.unsubscribe();
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   async function fetchProfile(userId) {

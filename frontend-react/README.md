@@ -18,7 +18,10 @@ React frontend for Lavitúr, preserving the original UI. Uses Vite, React Router
    VITE_SUPABASE_URL=https://your-project.supabase.co
    VITE_SUPABASE_ANON_KEY=your_anon_key
    VITE_API_BASE=http://localhost:5000
+   VITE_DASHBOARD_URL=http://localhost:3002
    ```
+
+   `VITE_DASHBOARD_URL` is the Admin Dashboard (React) URL. Staff see an "Admin Dashboard" link in the nav; set this in production to your deployed dashboard URL (e.g. `https://dashboard.lavitur.com`).
 
    If omitted, the app uses the same Supabase project as the original frontend. `VITE_API_BASE` is only needed when the API runs on a different origin (e.g. backend on port 5000). With the default Vite proxy, `/api` is forwarded to `http://localhost:5000`.
 

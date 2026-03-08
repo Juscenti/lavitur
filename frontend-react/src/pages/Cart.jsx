@@ -114,10 +114,30 @@ export default function Cart() {
     );
   }
 
+  const itemCount = items.reduce((n, i) => n + (i.quantity || 1), 0);
+
   return (
     <div className="cart-page">
-      <main className="cart-container">
-        <h1>Your Shopping Cart</h1>
+      <header className="cart-hero">
+        <div className="cart-hero-inner">
+          <h1>Your Shopping Cart</h1>
+          <div className="cart-hero-meta">
+            <span className="cart-hero-count">
+              {items.length} {items.length === 1 ? 'item' : 'items'} · {itemCount} total
+            </span>
+            <nav className="cart-breadcrumb" aria-label="Breadcrumb">
+              <Link to="/">Home</Link>
+              <span aria-hidden="true"> / </span>
+              <span>Cart</span>
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      <main className="cart-container has-hero">
+        <p className="cart-continue">
+          <Link to="/shop">← Continue shopping</Link>
+        </p>
 
         <ul className="cart-items" id="cart-items">
           {items.map((item, idx) => (
@@ -169,7 +189,7 @@ export default function Cart() {
           <p className="summary-total">
             <strong>Total:</strong> {formatMoney(total)}
           </p>
-          <button type="button" className="cta-button">Proceed to Checkout</button>
+          <Link to="/checkout" className="cta-button">Proceed to Checkout</Link>
         </div>
       </main>
     </div>

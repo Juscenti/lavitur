@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const slides = [
@@ -7,38 +7,49 @@ const slides = [
   '/images/slideshow/feature3.png',
 ];
 
+const extendedSlides = [slides[slides.length - 1], ...slides, slides[0]];
+
 export default function Hero() {
-  const [current, setCurrent] = useState(0);
-  const [hover, setHover] = useState(false);
+  const [index, setIndex] = useState(1);
+  const [noTransition, setNoTransition] = useState(false);
 
-  useEffect(() => {
-    if (hover) return;
-    const id = setInterval(() => setCurrent((c) => (c + 1) % slides.length), 5500);
-    return () => clearInterval(id);
-  }, [hover]);
+  const handleTransitionEnd = () => {
+    if (index === 0) {
+      setNoTransition(true);
+      setIndex(slides.length);
+      requestAnimationFrame(() => requestAnimationFrame(() => setNoTransition(false)));
+    } else if (index === extendedSlides.length - 1) {
+      setNoTransition(true);
+      setIndex(1);
+      requestAnimationFrame(() => requestAnimationFrame(() => setNoTransition(false)));
+    }
+  };
 
-  const goTo = (next) => {
-    setCurrent((c) => {
-      if (next >= slides.length) return 0;
-      if (next < 0) return slides.length - 1;
-      return next;
-    });
+  const goNext = () => {
+    setIndex((i) => (i === slides.length ? i + 1 : i + 1));
+  };
+
+  const goPrev = () => {
+    setIndex((i) => (i === 1 ? 0 : i - 1));
   };
 
   return (
     <header className="hero">
-      <div
-        className="hero-slider"
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-      >
-        <div className="slides" style={{ transform: `translateX(-${current * 100}%)` }}>
-          {slides.map((src, i) => (
+      <div className="hero-slider">
+        <div
+          className="slides"
+          style={{
+            transform: `translateX(-${index * 100}%)`,
+            transition: noTransition ? 'none' : 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+          onTransitionEnd={handleTransitionEnd}
+        >
+          {extendedSlides.map((src, i) => (
             <img key={i} src={src} className="slide" alt="Lavitúr Collection" />
           ))}
         </div>
-        <button type="button" className="nav prev" aria-label="Previous slide" onClick={() => goTo(current - 1)}>&#10094;</button>
-        <button type="button" className="nav next" aria-label="Next slide" onClick={() => goTo(current + 1)}>&#10095;</button>
+        <button type="button" className="nav prev" aria-label="Previous slide" onClick={goPrev}>&#10094;</button>
+        <button type="button" className="nav next" aria-label="Next slide" onClick={goNext}>&#10095;</button>
       </div>
       <div className="hero-content">
         <h1 className="WordLogo">Lavitúr</h1>

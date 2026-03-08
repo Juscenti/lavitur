@@ -1,0 +1,110 @@
+/* ===== Admin Login — aligned with admin theme ===== */
+.login-container {
+  display: flex;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+  background: #0f0f0f;
+  padding: 1rem;
+}
+
+.login-form {
+  background: #1a1a1a;
+  padding: 2.5rem;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 380px;
+  color: #e6e6e6;
+  box-shadow: 
+    0 24px 48px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.login-form h1 {
+  margin-bottom: 1.5rem;
+  font-weight: 800;
+  font-size: 1.75rem;
+  text-align: center;
+  color: #ff6b4a;
+  letter-spacing: -0.02em;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.form-group input {
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.form-group input:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.form-group input:focus {
+  border-color: #ff6b4a;
+  box-shadow: 0 0 0 3px rgba(255, 107, 74, 0.2);
+}
+
+.form-group small {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+button[type="submit"] {
+  width: 100%;
+  padding: 0.85rem;
+  background: linear-gradient(135deg, #ff6b4a, #ff5a3c);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+button[type="submit"]:hover {
+  background: linear-gradient(135deg, #ff7a5c, #ff6b4a);
+  transform: translateY(-1px);
+}
+
+button[type="submit"]:active {
+  transform: translateY(0);
+}
+
+.error-message {
+  margin-top: 1rem;
+  min-height: 1.2em;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #f87171;
+}
+
+.error-message:empty {
+  visibility: hidden;
+}

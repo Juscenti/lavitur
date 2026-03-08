@@ -338,6 +338,7 @@ body.index-page {
 .index-page #top-picks {
   padding: 6rem 2rem;
   background: var(--luxe-cream);
+  --tp-fade-bg: var(--luxe-cream);
 }
 
 .index-page #top-picks h2 {
@@ -355,10 +356,33 @@ body.index-page {
   margin: 0 auto;
 }
 
+.index-page .carousel-viewport {
+  position: relative;
+  margin: 0 44px;
+  overflow: hidden;
+}
+
+.index-page .carousel-viewport .tp-fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 48px;
+  pointer-events: none;
+  z-index: 2;
+}
+.index-page .carousel-viewport .tp-fade-left {
+  left: 0;
+  background: linear-gradient(to right, var(--tp-fade-bg) 0%, transparent 100%);
+}
+.index-page .carousel-viewport .tp-fade-right {
+  right: 0;
+  background: linear-gradient(to left, var(--tp-fade-bg) 0%, transparent 100%);
+}
+
 .index-page .tp-slides {
   display: flex;
   gap: 1.5rem;
-  padding: 0 3rem;
+  padding: 0 2rem;
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
