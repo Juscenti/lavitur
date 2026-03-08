@@ -48,6 +48,7 @@ router.patch('/products/:id/media/:mediaId/primary', setPrimaryMedia);
 router.get('/orders', adminOrders.listOrders);
 router.get('/orders/:id', adminOrders.getOrder);
 router.patch('/orders/:id/status', adminOrders.updateOrderStatus);
+router.delete('/orders/:id', adminOrders.deleteOrder);
 
 // Dashboard
 router.get('/dashboard', adminDashboard.getMetrics);

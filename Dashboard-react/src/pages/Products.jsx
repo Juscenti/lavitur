@@ -7,6 +7,7 @@ import {
   setPrimaryMedia,
   publicMediaUrl,
 } from '../lib/productMedia';
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal.jsx';
 import '../styles/product.css';
 import '../styles/productmodal.css';
 
@@ -94,6 +95,9 @@ export default function Products() {
   const [formSubCats, setFormSubCats] = useState([]);
   const [mediaList, setMediaList] = useState([]);
   const [mediaFiles, setMediaFiles] = useState([]);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -268,6 +272,27 @@ export default function Products() {
     setMediaList(await listProductMedia(modalProductId));
   };
 
+  const openDeleteModal = (prod) => {
+    setProductToDelete(prod);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return;
+    const idToDelete = productToDelete.id;
+    setDeleting(true);
+    try {
+      await api.delete(`/admin/products/${idToDelete}?confirm=DELETE`);
+      setDeleteModalOpen(false);
+      setProductToDelete(null);
+      await loadProducts();
+    } catch (err) {
+      alert(err?.data?.error || err?.message || 'Failed to delete product.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="products-page">
       <header>
@@ -348,6 +373,15 @@ export default function Products() {
                   <td>
                     <button type="button" data-action="edit" onClick={() => openModal(null, prod.id)}>
                       Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      style={{ marginLeft: '0.5rem' }}
+                      onClick={() => openDeleteModal(prod)}
+                      disabled={deleting}
+                    >
+                      Delete
                     </button>
                   </td>
                 </tr>
@@ -477,6 +511,14 @@ export default function Products() {
                           <button className="pbtn2 pbtn2--ghost editBtn" onClick={() => openModal(null, p.id)}>
                             Edit
                           </button>
+                          <button
+                            type="button"
+                            className="pbtn2 pbtn2--danger"
+                            onClick={() => openDeleteModal(p)}
+                            disabled={deleting}
+                          >
+                            Delete
+                          </button>
                         </div>
                       </div>
                     );
@@ -487,6 +529,14 @@ export default function Products() {
           </div>
         </section>
       </main>
+
+      <ConfirmDeleteModal
+        open={deleteModalOpen}
+        onClose={() => { setDeleteModalOpen(false); setProductToDelete(null); }}
+        onConfirm={handleDeleteProduct}
+        title={productToDelete ? `Delete product "${productToDelete.name}"?` : 'Delete product?'}
+        bodyLabel="Product"
+      />
 
       <div id="productFormModal" className={`pmodal ${modalOpen ? '' : 'hidden'}`}>
         <div className="pmodal__overlay" onClick={closeModal} aria-hidden="true" />

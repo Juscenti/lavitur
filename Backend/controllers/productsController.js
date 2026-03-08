@@ -302,10 +302,16 @@ export async function updateProductStatus(req, res) {
   }
 }
 
-/** Admin: delete product — use user JWT so DB triggers see auth.uid() */
+/** Admin: delete product. Requires confirm=DELETE in query or body. Uses user JWT so DB triggers see auth.uid(). */
 export async function deleteProduct(req, res) {
   try {
     const { id } = req.params;
+    const confirm = req.query.confirm || req.body?.confirm;
+    if (confirm !== 'DELETE') {
+      return res.status(400).json({
+        error: 'Deletion requires confirmation. Add ?confirm=DELETE to the request.',
+      });
+    }
     const supabase = supabaseWithUserToken(req.headers.authorization);
     const { error } = await supabase.from('products').delete().eq('id', id);
     if (error) throw error;

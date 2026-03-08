@@ -783,6 +783,17 @@
   transform: translateY(0);
 }
 
+.pbtn2--danger {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: linear-gradient(to bottom, #fef2f2, #fee2e2);
+  color: #b91c1c;
+}
+.pbtn2--danger:hover {
+  border-color: #ef4444;
+  background: linear-gradient(to bottom, #fee2e2, #fecaca);
+  transform: translateY(-2px);
+}
+
 /* ===== Elegant Scrollbar ===== */
 ::-webkit-scrollbar {
   width: 12px;

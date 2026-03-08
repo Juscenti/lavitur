@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal.jsx';
 
 const STATUS_OPTIONS = [
   'pending_payment',
@@ -28,6 +29,8 @@ export default function OrderDetail() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +66,20 @@ export default function OrderDetail() {
     }
   };
 
+  const handleDeleteOrder = async () => {
+    if (!order) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/admin/orders/${order.id}?confirm=DELETE`);
+      navigate('/orders');
+    } catch (err) {
+      console.error(err);
+      alert(err?.data?.error || err?.message || 'Failed to delete order.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <section className="panel">
@@ -73,10 +90,12 @@ export default function OrderDetail() {
   if (error || !order) {
     return (
       <section className="panel">
-        <p className="panel-muted" style={{ color: 'var(--danger, #c00)' }}>{error || 'Order not found.'}</p>
-        <button type="button" className="order-detail-back" onClick={() => navigate('/orders')}>
-          ← Back to Orders
-        </button>
+        <div className="alert alert-error">
+          <span>{error || 'Order not found.'}</span>
+          <button type="button" className="btn btn-secondary" onClick={() => navigate('/orders')}>
+            Back to Orders
+          </button>
+        </div>
       </section>
     );
   }
@@ -89,7 +108,7 @@ export default function OrderDetail() {
   return (
     <section className="panel order-detail-panel">
       <div className="order-detail-header">
-        <button type="button" className="order-detail-back" onClick={() => navigate('/orders')}>
+        <button type="button" className="btn btn-secondary order-detail-back" onClick={() => navigate('/orders')}>
           ← Back to Orders
         </button>
         <h1>Order {order.id.slice(0, 8)}</h1>
@@ -97,8 +116,24 @@ export default function OrderDetail() {
           <span className={`order-status order-status--${order.status}`}>{order.status}</span>
           <span className="order-detail-created">{new Date(order.created_at).toLocaleString()}</span>
           <span className="order-detail-total">{formatMoney(order.currency, order.total)}</span>
+          <button
+            type="button"
+            className="btn btn-danger"
+            onClick={() => setDeleteModalOpen(true)}
+            disabled={deleting}
+          >
+            {deleting ? 'Deleting…' : 'Delete order'}
+          </button>
         </div>
       </div>
+
+      <ConfirmDeleteModal
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteOrder}
+        title="Delete this order?"
+        bodyLabel="Order"
+      />
 
       <div className="order-detail-grid">
         <div className="order-detail-block">
@@ -136,15 +171,18 @@ export default function OrderDetail() {
 
         <div className="order-detail-block order-detail-status-block">
           <h2>Status</h2>
-          <select
-            className="orderStatus"
-            value={order.status}
-            onChange={(e) => handleStatusChange(e.target.value)}
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+          <div className="order-detail-status-row">
+            <select
+              className="orderStatus"
+              value={order.status}
+              onChange={(e) => handleStatusChange(e.target.value)}
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <span className="order-detail-status-hint">Changes save automatically</span>
+          </div>
         </div>
       </div>
 
@@ -157,9 +195,6 @@ export default function OrderDetail() {
 
       <div className="order-detail-block order-detail-items-block">
         <h2>Items ({items.length})</h2>
-        <p className="order-detail-items-source">
-          Line items are stored in the <code>order_items</code> table (one row per product in this order).
-        </p>
         {items.length === 0 ? (
           <p className="panel-muted">No line items recorded for this order. It may have been created before items were stored, or via another flow.</p>
         ) : (

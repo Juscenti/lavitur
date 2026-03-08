@@ -110,7 +110,7 @@ export const api = {
   get: (path) => request('GET', path),
   post: (path, body) => request('POST', path, { body: body ? JSON.stringify(body) : undefined }),
   patch: (path, body) => request('PATCH', path, { body: body ? JSON.stringify(body) : undefined }),
-  delete: (path) => request('DELETE', path),
+  delete: (path, body) => request('DELETE', path, { body: body ? JSON.stringify(body) : undefined }),
   upload: (path, formData) => requestMultipart('POST', path, formData),
 };
 

@@ -75,12 +75,19 @@ export default function Orders() {
   const customerEmail = (o) => o.customer_email || '—';
 
   return (
-    <section className="panel">
-      <h1>Orders</h1>
+    <section className="panel orders-panel">
+      <div className="orders-panel-header">
+        <h1>Orders</h1>
+        <div className="orders-panel-actions">
+          <button type="button" className="btn btn-primary" onClick={fetchOrders} disabled={loading}>
+            {loading ? 'Loading…' : 'Refresh'}
+          </button>
+        </div>
+      </div>
       {error && (
-        <div className="orders-error" style={{ marginBottom: '1rem', color: 'var(--danger, #c00)' }}>
-          {error}
-          <button type="button" onClick={fetchOrders} style={{ marginLeft: '0.5rem' }}>Retry</button>
+        <div className="alert alert-error">
+          <span>{error}</span>
+          <button type="button" className="btn btn-secondary" onClick={fetchOrders}>Retry</button>
         </div>
       )}
       <div className="table-container">
@@ -114,11 +121,14 @@ export default function Orders() {
                   <Fragment key={o.id}>
                     <tr>
                       <td>
-                        <Link to={`/orders/${o.id}`} className="order-id-link" title={o.id}>
-                          {shortId(o.id)}
-                        </Link>
-                        {' · '}
-                        <Link to={`/orders/${o.id}`} className="order-view-link">View full order</Link>
+                        <div className="order-cell-actions">
+                          <Link to={`/orders/${o.id}`} className="order-id-link" title={o.id}>
+                            {shortId(o.id)}
+                          </Link>
+                          <Link to={`/orders/${o.id}`} className="order-view-btn">
+                            View order
+                          </Link>
+                        </div>
                       </td>
                       <td>
                         <div className="order-customer">
