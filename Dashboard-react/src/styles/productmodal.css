@@ -744,6 +744,26 @@
   white-space: nowrap;
 }
 
+.pvariant-set-default {
+  border: 1px solid rgba(47,107,255,.35);
+  background: rgba(47,107,255,.1);
+  color: rgba(120,160,255,.95);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: background 0.2s, border-color 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pvariant-set-default:hover {
+  background: rgba(47,107,255,.22);
+  border-color: rgba(47,107,255,.6);
+}
+
 .pvariant-delete {
   border: none;
   background: rgba(200,50,50,.15);
@@ -759,6 +779,104 @@
 
 .pvariant-delete:hover {
   background: rgba(200,50,50,.3);
+}
+
+/* Variant card wraps the header row + image strip */
+.pvariant-card {
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px;
+  background: rgba(255,255,255,.04);
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.pvariant-card:hover {
+  border-color: rgba(255,255,255,.18);
+}
+
+.pvariant-card > .pvariant-row {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.pvariant-card > .pvariant-row:last-child {
+  border-bottom: none;
+}
+
+/* Image strip inside a variant card */
+.pvariant-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.pvariant-image-thumb {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.12);
+  flex-shrink: 0;
+}
+
+.pvariant-image-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pvariant-image-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,.7);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 0;
+}
+
+.pvariant-image-thumb:hover .pvariant-image-remove {
+  opacity: 1;
+}
+
+.pvariant-upload-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  border: 1.5px dashed rgba(47,107,255,.35);
+  background: rgba(47,107,255,.06);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.pvariant-upload-btn:hover {
+  background: rgba(47,107,255,.15);
+  border-color: rgba(47,107,255,.6);
+}
+
+.pvariant-upload-btn span {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(100,150,255,.9);
+  pointer-events: none;
 }
 
 .pvariant-add-form {

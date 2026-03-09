@@ -95,7 +95,7 @@ export default function Product() {
         const variants = Array.isArray(data.color_variants) ? data.color_variants : [];
         const defaultVariant = variants.find((v) => v.is_default) || variants[0] || null;
         setSelectedColor(defaultVariant);
-        const firstImages = defaultVariant && defaultVariant.images?.length ? defaultVariant.images : baseImages;
+        const firstImages = defaultVariant?.images?.length ? defaultVariant.images : baseImages;
         setMainImage(firstImages[0] || data.image_url || '');
         setReviews(Array.isArray(reviewsList) ? reviewsList : []);
         if (user && Array.isArray(wishlistData)) {
@@ -109,7 +109,7 @@ export default function Product() {
         else setError(true);
       })
       .finally(() => setLoading(false));
-  }, [id, user]);
+  }, [id, user?.id]);
 
   useEffect(() => {
     if (product) document.title = (product.title || 'Product') + ' – Lavitúr';

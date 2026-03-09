@@ -348,6 +348,27 @@ export default function Products() {
     setMediaList(await listProductMedia(modalProductId));
   };
 
+  const reloadVariants = async () => {
+    const updated = await api.get(`/admin/products/${modalProductId}/color-variants`);
+    setColorVariants(Array.isArray(updated) ? updated : []);
+  };
+
+  const handleSetVariantDefault = async (variantId) => {
+    await api.patch(`/admin/products/${modalProductId}/color-variants/${variantId}`, { is_default: true });
+    await reloadVariants();
+  };
+
+  const handleVariantMediaUpload = async (variantId, files) => {
+    if (!files || !files.length || !modalProductId) return;
+    await uploadProductMedia(modalProductId, [...files], { color_variant_id: variantId });
+    await reloadVariants();
+  };
+
+  const handleVariantMediaDelete = async (mediaRow) => {
+    await deleteProductMedia(mediaRow);
+    await reloadVariants();
+  };
+
   const handleAddVariant = async () => {
     if (!newVariantName.trim()) {
       alert('Colour name is required.');
@@ -789,33 +810,83 @@ export default function Products() {
                 )}
                 {colorVariantsEnabled && (
                   <div className="pvariant-section">
+                    <p className="pfield-hint" style={{ marginBottom: 6 }}>
+                      Each colour gets its own photos. The main product photos above show when no colour is selected.
+                    </p>
                     {colorVariants.map((v) => (
-                      <div key={v.id || v._tempId} className="pvariant-row">
-                        <span
-                          className="pvariant-swatch"
-                          style={{ background: v.color_hex || '#888' }}
-                        />
-                        <span className="pvariant-name">{v.color_name}</span>
-                        {v.is_default && (
-                          <span className="pvariant-default-badge">Default</span>
+                      <div key={v.id || v._tempId} className="pvariant-card">
+                        {/* Header row */}
+                        <div className="pvariant-row">
+                          <span
+                            className="pvariant-swatch"
+                            style={{ background: v.color_hex || '#888' }}
+                          />
+                          <span className="pvariant-name">{v.color_name}</span>
+                          {v.is_default ? (
+                            <span className="pvariant-default-badge">Default</span>
+                          ) : (
+                            v.id && (
+                              <button
+                                type="button"
+                                className="pvariant-set-default"
+                                onClick={() => handleSetVariantDefault(v.id)}
+                              >
+                                Set default
+                              </button>
+                            )
+                          )}
+                          <button
+                            type="button"
+                            className="pvariant-delete"
+                            onClick={() => handleDeleteVariant(v)}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        {/* Image strip — saved variants (edit mode) */}
+                        {v.id && (
+                          <div className="pvariant-images">
+                            {(v.media || []).map((m) => (
+                              <div key={m.id} className="pvariant-image-thumb">
+                                <img src={m.public_url} alt={v.color_name} />
+                                <button
+                                  type="button"
+                                  className="pvariant-image-remove"
+                                  onClick={() => handleVariantMediaDelete(m)}
+                                  title="Remove image"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                            <label className="pvariant-upload-btn" title="Add images for this colour">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                style={{ display: 'none' }}
+                                onChange={(e) => {
+                                  handleVariantMediaUpload(v.id, e.target.files);
+                                  e.target.value = '';
+                                }}
+                              />
+                              <span>+ Add</span>
+                            </label>
+                          </div>
                         )}
-                        {Array.isArray(v.media) && v.media.length > 0 && (
-                          <span className="pvariant-img-count">
-                            {v.media.length} image{v.media.length !== 1 ? 's' : ''}
-                          </span>
+                        {/* Pending files preview — new product mode */}
+                        {!v.id && Array.isArray(v.files) && v.files.length > 0 && (
+                          <div className="pvariant-images">
+                            {v.files.map((f, fi) => (
+                              <div key={fi} className="pvariant-image-thumb">
+                                <img src={URL.createObjectURL(f)} alt={`preview ${fi}`} />
+                              </div>
+                            ))}
+                          </div>
                         )}
-                        {Array.isArray(v.files) && v.files.length > 0 && (
-                          <span className="pvariant-img-count">
-                            {v.files.length} file{v.files.length !== 1 ? 's' : ''}
-                          </span>
+                        {!v.id && (!v.files || v.files.length === 0) && (
+                          <p className="pfield-hint" style={{ marginTop: 4 }}>No images queued — add them after saving.</p>
                         )}
-                        <button
-                          type="button"
-                          className="pvariant-delete"
-                          onClick={() => handleDeleteVariant(v)}
-                        >
-                          Remove
-                        </button>
                       </div>
                     ))}
 
@@ -898,8 +969,11 @@ export default function Products() {
               <div className="pmedia">
                 <div className="pmedia__header">
                   <div>
-                    <div className="pmedia__title">Product Media</div>
-                    <div className="pmedia__sub">Upload images/videos for this product.</div>
+                    <div className="pmedia__title">Main Photos</div>
+                    <div className="pmedia__sub">
+                      The primary photo is shown first on the shop card and PDP.
+                      {colorVariantsEnabled && ' Per-colour photos are managed inside each colour below.'}
+                    </div>
                   </div>
                 </div>
                 <label className="pupload">
@@ -914,23 +988,25 @@ export default function Products() {
                 </label>
                 <div id="productMediaGrid" className="media-grid">
                   {modalProductId
-                    ? mediaList.map((m) => (
-                        <div key={m.id} className="media-card">
-                          {m.media_type === 'video' ? (
-                            <video src={m.public_url || publicMediaUrl(m.file_path)} controls />
-                          ) : (
-                            <img src={m.public_url || publicMediaUrl(m.file_path)} alt="product media" />
-                          )}
-                          <div className="media-actions">
-                            <button type="button" className="primary" onClick={() => handleSetPrimary(m)}>
-                              {m.is_primary ? 'Primary ✓' : 'Set Primary'}
-                            </button>
-                            <button type="button" className="delete" onClick={() => handleDeleteMedia(m)}>
-                              Delete
-                            </button>
+                    ? mediaList
+                        .filter((m) => !m.color_variant_id)
+                        .map((m) => (
+                          <div key={m.id} className="media-card">
+                            {m.media_type === 'video' ? (
+                              <video src={m.public_url || publicMediaUrl(m.file_path)} controls />
+                            ) : (
+                              <img src={m.public_url || publicMediaUrl(m.file_path)} alt="product media" />
+                            )}
+                            <div className="media-actions">
+                              <button type="button" className="primary" onClick={() => handleSetPrimary(m)}>
+                                {m.is_primary ? 'Primary ✓' : 'Set Primary'}
+                              </button>
+                              <button type="button" className="delete" onClick={() => handleDeleteMedia(m)}>
+                                Delete
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        ))
                     : mediaFiles.length
                       ? mediaFiles.map((f, i) => (
                           <div key={i} className="media-card">

@@ -567,6 +567,20 @@ export async function updateColorVariant(req, res) {
     if (is_default !== undefined) updates.is_default = is_default;
     if (position !== undefined) updates.position = position;
 
+    // When promoting to default, clear the flag on every other variant for this product first
+    if (updates.is_default === true) {
+      const { data: variant, error: fetchErr } = await supabaseAdmin
+        .from('product_color_variants')
+        .select('product_id')
+        .eq('id', variantId)
+        .single();
+      if (fetchErr) throw fetchErr;
+      await supabaseAdmin
+        .from('product_color_variants')
+        .update({ is_default: false })
+        .eq('product_id', variant.product_id);
+    }
+
     const { error } = await supabaseAdmin
       .from('product_color_variants')
       .update(updates)
