@@ -7,10 +7,11 @@ export async function listProductMedia(productId) {
   return Array.isArray(data) ? data : [];
 }
 
-export async function uploadProductMedia(productId, files, { makeFirstImagePrimary = false } = {}) {
+export async function uploadProductMedia(productId, files, { makeFirstImagePrimary = false, color_variant_id = null } = {}) {
   const form = new FormData();
   for (const file of files) form.append('files', file);
   if (makeFirstImagePrimary) form.append('makeFirstImagePrimary', 'true');
+  if (color_variant_id) form.append('color_variant_id', color_variant_id);
   const data = await api.upload(`/admin/products/${productId}/media`, form);
   return Array.isArray(data) ? data : [];
 }

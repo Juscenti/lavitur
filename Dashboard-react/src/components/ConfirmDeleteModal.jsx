@@ -16,39 +16,22 @@ export default function ConfirmDeleteModal({ open, onClose, onConfirm, title, bo
   const canConfirm = String(typed).trim().toUpperCase() === CONFIRM_WORD && !isBusy;
 
   const handleConfirm = async () => {
-    // #region agent log
-    console.log('[DEBUG modal] handleConfirm called', {canConfirm, isBusy, typed: typed.trim(), confirmPayload});
-    // #endregion
     if (!canConfirm) return;
     setBusy(true);
     try {
-      // #region agent log
-      console.log('[DEBUG modal] calling onConfirm with payload:', confirmPayload);
-      // #endregion
       const result = onConfirm(confirmPayload);
-      // #region agent log
-      console.log('[DEBUG modal] onConfirm returned, isPromise:', result && typeof result.then === 'function');
-      // #endregion
       if (result && typeof result.then === 'function') {
         try {
           await result;
-          // #region agent log
-          console.log('[DEBUG modal] promise resolved OK');
-          // #endregion
           onClose();
         } catch (promiseErr) {
-          // #region agent log
-          console.error('[DEBUG modal] promise REJECTED', promiseErr?.message, promiseErr?.status, promiseErr?.data, promiseErr?.responseText);
-          // #endregion
           throw promiseErr;
         }
       } else {
         onClose();
       }
     } catch (outerErr) {
-      // #region agent log
-      console.error('[DEBUG modal] outer catch', outerErr?.message, outerErr?.status, outerErr?.data, outerErr?.responseText);
-      // #endregion
+      // parent alert handles the error message
     } finally {
       setBusy(false);
     }

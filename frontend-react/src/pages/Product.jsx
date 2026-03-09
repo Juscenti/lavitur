@@ -61,6 +61,7 @@ export default function Product() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [mainImage, setMainImage] = useState('');
+  const [selectedColor, setSelectedColor] = useState(null);
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [wishlisted, setWishlisted] = useState(false);
@@ -90,8 +91,12 @@ export default function Product() {
     ])
       .then(([data, reviewsList, wishlistData]) => {
         setProduct(data);
-        const images = (data.images && data.images.length) ? data.images : (data.image_url ? [data.image_url] : []);
-        setMainImage(images[0] || data.image_url || '');
+        const baseImages = (data.images && data.images.length) ? data.images : (data.image_url ? [data.image_url] : []);
+        const variants = Array.isArray(data.color_variants) ? data.color_variants : [];
+        const defaultVariant = variants.find((v) => v.is_default) || variants[0] || null;
+        setSelectedColor(defaultVariant);
+        const firstImages = defaultVariant && defaultVariant.images?.length ? defaultVariant.images : baseImages;
+        setMainImage(firstImages[0] || data.image_url || '');
         setReviews(Array.isArray(reviewsList) ? reviewsList : []);
         if (user && Array.isArray(wishlistData)) {
           setWishlisted(wishlistData.some((w) => String(w.product_id) === String(data.id)));
@@ -194,21 +199,28 @@ export default function Product() {
     );
   }
 
-  const images = (product.images && product.images.length) ? product.images : (product.image_url ? [product.image_url] : []);
+  const colorVariants = Array.isArray(product.color_variants) ? product.color_variants : [];
+  const hasColors = colorVariants.length > 0;
+  const baseImages = (product.images && product.images.length) ? product.images : (product.image_url ? [product.image_url] : []);
+  const activeImages = (() => {
+    if (!selectedColor) return baseImages;
+    const varImgs = selectedColor.images || [];
+    return varImgs.length ? varImgs : baseImages;
+  })();
   const sizes = (product.sizes && product.sizes.length) ? product.sizes : DEFAULT_SIZES;
   const stock = Number(product.stock ?? 0);
   const maxQty = Math.max(1, Math.min(99, stock));
   const avgRating = reviews.length ? reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length : 0;
   const categorySlug = (product.category_slug || product.category_slugs?.[0] || '').toLowerCase().trim();
   const showDescription = isRealDescription(product.description);
-  const currentImageIndex = images.length ? Math.max(0, images.indexOf(mainImage)) : 0;
+  const currentImageIndex = activeImages.length ? Math.max(0, activeImages.indexOf(mainImage)) : 0;
   const goToPrev = () => {
-    if (images.length < 2) return;
-    setMainImage(images[(currentImageIndex - 1 + images.length) % images.length]);
+    if (activeImages.length < 2) return;
+    setMainImage(activeImages[(currentImageIndex - 1 + activeImages.length) % activeImages.length]);
   };
   const goToNext = () => {
-    if (images.length < 2) return;
-    setMainImage(images[(currentImageIndex + 1) % images.length]);
+    if (activeImages.length < 2) return;
+    setMainImage(activeImages[(currentImageIndex + 1) % activeImages.length]);
   };
 
   return (
@@ -233,7 +245,7 @@ export default function Product() {
               alt={product.title}
               onError={(e) => { e.target.onerror = null; e.target.src = PLACEHOLDER_SVG; }}
             />
-            {images.length > 1 && (
+            {activeImages.length > 1 && (
               <>
                 <button
                   type="button"
@@ -254,9 +266,9 @@ export default function Product() {
               </>
             )}
           </div>
-          {images.length > 1 && (
+          {activeImages.length > 1 && (
             <div className="pdp-gallery-thumbs">
-              {images.map((url, i) => (
+              {activeImages.map((url, i) => (
                 <button
                   key={i}
                   type="button"
@@ -290,6 +302,38 @@ export default function Product() {
               <span className="pdp-stock-out">Sold out</span>
             )}
           </p>
+
+          {hasColors && (
+            <div className="pdp-option pdp-color-wrap">
+              <label className="pdp-option-label">
+                Colour{selectedColor ? `: ${selectedColor.color_name}` : ''}
+              </label>
+              <div className="pdp-color-options">
+                {colorVariants.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    className={'pdp-color-btn' + (selectedColor?.id === v.id ? ' selected' : '')}
+                    title={v.color_name}
+                    aria-label={v.color_name}
+                    aria-pressed={selectedColor?.id === v.id}
+                    onClick={() => {
+                      setSelectedColor(v);
+                      const vImgs = v.images || [];
+                      const imgs = vImgs.length ? vImgs : baseImages;
+                      setMainImage(imgs[0] || '');
+                    }}
+                  >
+                    {v.color_hex ? (
+                      <span className="pdp-color-swatch" style={{ background: v.color_hex }} />
+                    ) : (
+                      <span className="pdp-color-label">{v.color_name}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="pdp-option pdp-size-wrap">
             <label className="pdp-option-label">Size</label>

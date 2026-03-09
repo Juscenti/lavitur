@@ -19,6 +19,8 @@ const MAIN_CATEGORY_NORMS = new Set(
 );
 const nameNorm = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').replace(/['']/g, "'").trim();
 
+const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+
 function toUiProduct(row) {
   const cats = Array.isArray(row.categories) ? row.categories.filter((c) => c && c !== 'Unassigned') : [];
   const catDisplay = cats.length ? cats.join(', ') : (row.category || 'Unassigned');
@@ -33,6 +35,7 @@ function toUiProduct(row) {
     category: catDisplay,
     categories: cats.length ? cats : [],
     thumbUrl: row.thumbUrl ?? null,
+    sizes: row.sizes || null,
   };
 }
 
@@ -83,18 +86,37 @@ export default function Products() {
   const [viewerStatus, setViewerStatus] = useState('');
   const [viewerCategory, setViewerCategory] = useState('');
   const [editorialMode, setEditorialMode] = useState(false);
-  const [editorialFilter, setEditorialFilter] = useState(null); // { type: 'main'|'sub', value: string }
+  const [editorialFilter, setEditorialFilter] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalProductId, setModalProductId] = useState(null);
   const [modalCategory, setModalCategory] = useState(null);
+
+  // Core product fields
   const [formTitle, setFormTitle] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formPrice, setFormPrice] = useState('');
   const [formStock, setFormStock] = useState('');
   const [formMainCat, setFormMainCat] = useState('');
   const [formSubCats, setFormSubCats] = useState([]);
+
+  // Sizes
+  const [formSizesEnabled, setFormSizesEnabled] = useState(false);
+  const [formSizes, setFormSizes] = useState([]);
+
+  // Colour variants
+  const [colorVariantsEnabled, setColorVariantsEnabled] = useState(false);
+  const [colorVariants, setColorVariants] = useState([]);
+  const [addVariantOpen, setAddVariantOpen] = useState(false);
+  const [newVariantName, setNewVariantName] = useState('');
+  const [newVariantHex, setNewVariantHex] = useState('#000000');
+  const [newVariantFiles, setNewVariantFiles] = useState([]);
+  const [variantSaving, setVariantSaving] = useState(false);
+
+  // Media
   const [mediaList, setMediaList] = useState([]);
   const [mediaFiles, setMediaFiles] = useState([]);
+
+  // Delete
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -102,16 +124,10 @@ export default function Products() {
   const loadProducts = useCallback(async (noCache = false) => {
     try {
       const productsPath = noCache ? `/admin/products?_=${Date.now()}` : '/admin/products';
-      // #region agent log
-      console.log('[DEBUG loadProducts] fetching', productsPath);
-      // #endregion
       const [productsRes, catRes] = await Promise.all([
         api.get(productsPath),
         api.get('/categories').catch(() => []),
       ]);
-      // #region agent log
-      console.log('[DEBUG loadProducts] got', Array.isArray(productsRes) ? productsRes.length : 'non-array', 'products');
-      // #endregion
       if (!Array.isArray(productsRes)) {
         alert('Failed to load products');
         return;
@@ -119,9 +135,7 @@ export default function Products() {
       setCategories(Array.isArray(catRes) ? catRes : []);
       setProductData(productsRes.map((r) => toUiProduct(r)));
     } catch (err) {
-      // #region agent log
-      console.error('[DEBUG loadProducts] error', err?.message, err?.status, err?.data, err?.responseText);
-      // #endregion
+      console.error(err);
       alert('Failed to load products');
     }
   }, []);
@@ -166,6 +180,13 @@ export default function Products() {
     }
   };
 
+  const resetVariantForm = () => {
+    setAddVariantOpen(false);
+    setNewVariantName('');
+    setNewVariantHex('#000000');
+    setNewVariantFiles([]);
+  };
+
   const openModal = (categoryName, productId) => {
     setModalCategory(categoryName || null);
     setModalProductId(productId || null);
@@ -178,8 +199,21 @@ export default function Products() {
         setFormStock(Number(existing.stock ?? 0));
         setFormMainCat((existing.categories && existing.categories[0]) || '');
         setFormSubCats(existing.categories || []);
+        const hasSizes = Array.isArray(existing.sizes) && existing.sizes.length > 0;
+        setFormSizesEnabled(hasSizes);
+        setFormSizes(hasSizes ? existing.sizes : []);
       }
       listProductMedia(productId).then(setMediaList);
+      // Load colour variants for this product
+      api.get(`/admin/products/${productId}/color-variants`)
+        .then((variants) => {
+          const list = Array.isArray(variants) ? variants : [];
+          setColorVariantsEnabled(list.length > 0);
+          setColorVariants(list);
+        })
+        .catch(() => {
+          setColorVariants([]);
+        });
     } else {
       setFormTitle('');
       setFormDescription('');
@@ -189,7 +223,12 @@ export default function Products() {
       setFormSubCats([]);
       setMediaList([]);
       setMediaFiles([]);
+      setFormSizesEnabled(false);
+      setFormSizes([]);
+      setColorVariantsEnabled(false);
+      setColorVariants([]);
     }
+    resetVariantForm();
     setModalOpen(true);
   };
 
@@ -197,6 +236,15 @@ export default function Products() {
     setModalOpen(false);
     setModalProductId(null);
     setMediaFiles([]);
+    setFormSizesEnabled(false);
+    setFormSizes([]);
+    setColorVariantsEnabled(false);
+    setColorVariants([]);
+    resetVariantForm();
+  };
+
+  const toggleSize = (s) => {
+    setFormSizes((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
   };
 
   const handleSubmit = async (e) => {
@@ -223,6 +271,8 @@ export default function Products() {
       return;
     }
 
+    const sizes = formSizesEnabled && formSizes.length > 0 ? formSizes : null;
+
     try {
       if (modalProductId) {
         await api.patch(`/admin/products/${modalProductId}`, {
@@ -231,6 +281,7 @@ export default function Products() {
           price,
           stock,
           categoryNames,
+          sizes,
         });
       } else {
         const res = await api.post('/admin/products', {
@@ -239,10 +290,26 @@ export default function Products() {
           price,
           stock,
           categoryNames,
+          sizes,
         });
         const newId = res.id;
         if (mediaFiles.length) {
           await uploadProductMedia(newId, mediaFiles, { makeFirstImagePrimary: true });
+        }
+        // Create queued colour variants for new product
+        if (colorVariantsEnabled && colorVariants.length > 0) {
+          for (let i = 0; i < colorVariants.length; i++) {
+            const v = colorVariants[i];
+            const variantRes = await api.post(`/admin/products/${newId}/color-variants`, {
+              color_name: v.color_name,
+              color_hex: v.color_hex || null,
+              is_default: i === 0,
+              position: i,
+            });
+            if (v.files && v.files.length && variantRes.id) {
+              await uploadProductMedia(newId, v.files, { color_variant_id: variantRes.id });
+            }
+          }
         }
       }
       closeModal();
@@ -281,6 +348,61 @@ export default function Products() {
     setMediaList(await listProductMedia(modalProductId));
   };
 
+  const handleAddVariant = async () => {
+    if (!newVariantName.trim()) {
+      alert('Colour name is required.');
+      return;
+    }
+    setVariantSaving(true);
+    try {
+      if (modalProductId) {
+        // Edit mode: save to API immediately
+        const variantRes = await api.post(`/admin/products/${modalProductId}/color-variants`, {
+          color_name: newVariantName.trim(),
+          color_hex: newVariantHex || null,
+          is_default: colorVariants.length === 0,
+          position: colorVariants.length,
+        });
+        if (newVariantFiles.length && variantRes.id) {
+          await uploadProductMedia(modalProductId, newVariantFiles, { color_variant_id: variantRes.id });
+        }
+        const updated = await api.get(`/admin/products/${modalProductId}/color-variants`);
+        setColorVariants(Array.isArray(updated) ? updated : []);
+      } else {
+        // New product: queue for creation after product save
+        const tempId = `temp_${Date.now()}_${Math.random()}`;
+        setColorVariants((prev) => [
+          ...prev,
+          {
+            _tempId: tempId,
+            color_name: newVariantName.trim(),
+            color_hex: newVariantHex || null,
+            is_default: prev.length === 0,
+            files: newVariantFiles,
+          },
+        ]);
+      }
+      resetVariantForm();
+    } catch (err) {
+      alert(err?.message || 'Failed to add colour.');
+    } finally {
+      setVariantSaving(false);
+    }
+  };
+
+  const handleDeleteVariant = async (variant) => {
+    if (variant.id && modalProductId) {
+      try {
+        await api.delete(`/admin/products/${modalProductId}/color-variants/${variant.id}`);
+        setColorVariants((prev) => prev.filter((v) => v.id !== variant.id));
+      } catch (err) {
+        alert(err?.message || 'Failed to remove colour.');
+      }
+    } else {
+      setColorVariants((prev) => prev.filter((v) => v._tempId !== variant._tempId));
+    }
+  };
+
   const openDeleteModal = (prod) => {
     setProductToDelete(prod);
     setDeleteModalOpen(true);
@@ -288,36 +410,17 @@ export default function Products() {
 
   const handleDeleteProduct = async (id) => {
     const productId = id ?? productToDelete?.id;
-    // #region agent log
-    console.log('[DEBUG products] handleDeleteProduct called', {id, productId, productToDeleteId: productToDelete?.id});
-    // #endregion
     if (!productId) {
       alert('No product selected.');
       return;
     }
     setDeleting(true);
     try {
-      const url = `/admin/products/${productId}?confirm=DELETE`;
-      // #region agent log
-      console.log('[DEBUG products] calling api.delete', url);
-      // #endregion
-      await api.delete(url);
-      // #region agent log
-      console.log('[DEBUG products] api.delete succeeded for', productId);
-      // #endregion
+      await api.delete(`/admin/products/${productId}?confirm=DELETE`);
       setDeleteModalOpen(false);
       setProductToDelete(null);
-      // #region agent log
-      console.log('[DEBUG products] calling loadProducts(true)');
-      // #endregion
       await loadProducts(true);
-      // #region agent log
-      console.log('[DEBUG products] loadProducts done, productData length will update on next render');
-      // #endregion
     } catch (err) {
-      // #region agent log
-      console.error('[DEBUG products] api.delete threw', err?.message, err?.status, err?.data, err?.responseText);
-      // #endregion
       alert(err?.data?.error || err?.message || 'Failed to delete product.');
     } finally {
       setDeleting(false);
@@ -628,6 +731,160 @@ export default function Products() {
                 </select>
                 <span className="pfield-hint">Hold Ctrl/Cmd to select multiple. Optional.</span>
               </div>
+
+              {/* Custom Sizes */}
+              <div className="pfield">
+                <div className="ptoggle-row">
+                  <label className="ptoggle-label">Custom sizes</label>
+                  <label className="ptoggle">
+                    <input
+                      type="checkbox"
+                      checked={formSizesEnabled}
+                      onChange={(e) => setFormSizesEnabled(e.target.checked)}
+                    />
+                    <span className="ptoggle__track" />
+                  </label>
+                </div>
+                {formSizesEnabled && (
+                  <>
+                    <div className="psize-btns">
+                      {ALL_SIZES.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          className={'psize-btn' + (formSizes.includes(s) ? ' active' : '')}
+                          onClick={() => toggleSize(s)}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                    {formSizes.length === 0 && (
+                      <span className="pfield-hint" style={{ color: 'rgba(255,200,100,.8)' }}>
+                        Select at least one size, or turn off to use default sizes (XS – XL).
+                      </span>
+                    )}
+                  </>
+                )}
+                {!formSizesEnabled && (
+                  <span className="pfield-hint">Off — shop will show default sizes (XS, S, M, L, XL).</span>
+                )}
+              </div>
+
+              {/* Colour Variants */}
+              <div className="pfield">
+                <div className="ptoggle-row">
+                  <label className="ptoggle-label">Colour variants</label>
+                  <label className="ptoggle">
+                    <input
+                      type="checkbox"
+                      checked={colorVariantsEnabled}
+                      onChange={(e) => setColorVariantsEnabled(e.target.checked)}
+                    />
+                    <span className="ptoggle__track" />
+                  </label>
+                </div>
+                {!colorVariantsEnabled && (
+                  <span className="pfield-hint">Off — product will not show colour options on the shop.</span>
+                )}
+                {colorVariantsEnabled && (
+                  <div className="pvariant-section">
+                    {colorVariants.map((v) => (
+                      <div key={v.id || v._tempId} className="pvariant-row">
+                        <span
+                          className="pvariant-swatch"
+                          style={{ background: v.color_hex || '#888' }}
+                        />
+                        <span className="pvariant-name">{v.color_name}</span>
+                        {v.is_default && (
+                          <span className="pvariant-default-badge">Default</span>
+                        )}
+                        {Array.isArray(v.media) && v.media.length > 0 && (
+                          <span className="pvariant-img-count">
+                            {v.media.length} image{v.media.length !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {Array.isArray(v.files) && v.files.length > 0 && (
+                          <span className="pvariant-img-count">
+                            {v.files.length} file{v.files.length !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          className="pvariant-delete"
+                          onClick={() => handleDeleteVariant(v)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+
+                    {addVariantOpen ? (
+                      <div className="pvariant-add-form">
+                        <div className="pgrid2">
+                          <div className="pfield">
+                            <label>Colour name</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Navy Blue"
+                              value={newVariantName}
+                              onChange={(e) => setNewVariantName(e.target.value)}
+                            />
+                          </div>
+                          <div className="pfield">
+                            <label>Colour picker</label>
+                            <input
+                              type="color"
+                              value={newVariantHex}
+                              onChange={(e) => setNewVariantHex(e.target.value)}
+                              className="pcolor-input"
+                            />
+                          </div>
+                        </div>
+                        <div className="pfield">
+                          <label>Images for this colour</label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={(e) => setNewVariantFiles([...(e.target.files || [])])}
+                            className="pfile-input"
+                          />
+                          {newVariantFiles.length > 0 && (
+                            <span className="pfield-hint">{newVariantFiles.length} file{newVariantFiles.length !== 1 ? 's' : ''} selected</span>
+                          )}
+                        </div>
+                        <div className="pvariant-add-actions">
+                          <button
+                            type="button"
+                            className="pbtn pbtn--ghost"
+                            onClick={resetVariantForm}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            className="pbtn pbtn--primary"
+                            onClick={handleAddVariant}
+                            disabled={variantSaving}
+                          >
+                            {variantSaving ? 'Adding…' : 'Add colour'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="pbtn pbtn--ghost pvariant-add-btn"
+                        onClick={() => setAddVariantOpen(true)}
+                      >
+                        + Add colour
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="pmodal__footer">
                 <button type="button" className="pbtn pbtn--ghost" onClick={closeModal}>
                   Cancel

@@ -7,7 +7,7 @@ export async function listPublicProducts(req, res) {
     const { data: prodRows, error: prodErr } = await supabaseAdmin
       .from('products')
       .select(`
-        id, title, description, price, stock, status, created_at,
+        id, title, description, price, stock, status, sizes, created_at,
         product_media (file_path, media_type, is_primary, position)
       `)
       .eq('status', 'published')
@@ -60,6 +60,7 @@ export async function listPublicProducts(req, res) {
         description: p.description || '',
         price: Number(p.price ?? 0),
         stock: Number(p.stock ?? 0),
+        sizes: p.sizes || null,
         image_url,
         category_slug: slug,
         category_name: primaryCat?.name || names[0] || '',
@@ -83,8 +84,8 @@ export async function getOnePublicProduct(req, res) {
     const { data: row, error } = await supabaseAdmin
       .from('products')
       .select(`
-        id, title, description, price, stock, status, created_at,
-        product_media (file_path, media_type, is_primary, position)
+        id, title, description, price, stock, status, sizes, created_at,
+        product_media (id, file_path, media_type, is_primary, position, color_variant_id)
       `)
       .eq('id', id)
       .eq('status', 'published')
@@ -114,26 +115,58 @@ export async function getOnePublicProduct(req, res) {
       if (category_names.length) category_name = category_names[0];
     }
 
-    // Supabase .single() can return nested relation as one object instead of array — normalize to array
+    // Normalize media rows
     let rawMedia = row.product_media;
     if (!Array.isArray(rawMedia)) rawMedia = rawMedia ? [rawMedia] : [];
-    // If nested relation is empty, fetch media directly (avoids PDP missing images when relation doesn't load)
     if (rawMedia.length === 0) {
       const { data: mediaRows } = await supabaseAdmin
         .from('product_media')
-        .select('file_path, media_type, is_primary, position')
+        .select('id, file_path, media_type, is_primary, position, color_variant_id')
         .eq('product_id', row.id)
         .order('position', { ascending: true });
       rawMedia = mediaRows || [];
     }
+
+    // Sort: primary first, then by position
     const media = [...rawMedia].sort((a, b) => {
       if (a.is_primary && !b.is_primary) return -1;
       if (!a.is_primary && b.is_primary) return 1;
       return (a.position ?? 0) - (b.position ?? 0);
     });
+
+    // Base images (no color variant attached)
+    const baseMedia = media.filter((m) => !m.color_variant_id && m.media_type === 'image');
     const primary = media.find((m) => m.media_type === 'image') || media[0];
     const image_url = primary ? getProductMediaPublicUrl(primary.file_path) : '';
-    const images = media.filter((m) => m.media_type === 'image').map((m) => getProductMediaPublicUrl(m.file_path));
+    const images = baseMedia.map((m) => getProductMediaPublicUrl(m.file_path));
+
+    // Fetch colour variants and attach their images
+    const { data: variantRows, error: varErr } = await supabaseAdmin
+      .from('product_color_variants')
+      .select('id, color_name, color_hex, is_default, position')
+      .eq('product_id', row.id)
+      .order('position', { ascending: true });
+
+    if (varErr) console.warn('getOnePublicProduct: variant fetch error:', varErr.message);
+
+    const variantMediaMap = new Map();
+    media.filter((m) => m.color_variant_id).forEach((m) => {
+      const arr = variantMediaMap.get(m.color_variant_id) || [];
+      arr.push(m);
+      variantMediaMap.set(m.color_variant_id, arr);
+    });
+
+    const color_variants = (variantRows || []).map((v) => {
+      const vMedia = (variantMediaMap.get(v.id) || []).filter((m) => m.media_type === 'image');
+      return {
+        id: v.id,
+        color_name: v.color_name,
+        color_hex: v.color_hex || null,
+        is_default: v.is_default,
+        position: v.position,
+        images: vMedia.map((m) => getProductMediaPublicUrl(m.file_path)),
+      };
+    });
 
     res.json({
       id: row.id,
@@ -141,8 +174,10 @@ export async function getOnePublicProduct(req, res) {
       description: row.description || '',
       price: Number(row.price ?? 0),
       stock: Number(row.stock ?? 0),
+      sizes: row.sizes || null,
       image_url,
       images,
+      color_variants,
       category_slug,
       category_name,
       category_slugs: category_slugs.length ? category_slugs : [category_slug],
@@ -161,7 +196,7 @@ export async function listAdminProducts(req, res) {
     const { data: prodRows, error: prodErr } = await supabaseAdmin
       .from('products')
       .select(`
-        id, title, description, price, stock, status, created_at, updated_at,
+        id, title, description, price, stock, status, sizes, created_at, updated_at,
         product_media (id, file_path, media_type, is_primary, position)
       `)
       .order('created_at', { ascending: false });
@@ -194,6 +229,7 @@ export async function listAdminProducts(req, res) {
         stock: p.stock ?? '',
         status: p.status,
         published: p.status === 'published',
+        sizes: p.sizes || null,
         category: catNames.length ? catNames.join(', ') : 'Unassigned',
         categories: catNames.length ? catNames : ['Unassigned'],
         thumbUrl,
@@ -211,7 +247,7 @@ export async function listAdminProducts(req, res) {
 /** Admin: create product — use user JWT so DB triggers (e.g. role check) see auth.uid() */
 export async function createProduct(req, res) {
   try {
-    const { title, description, price, stock, categoryName, categoryNames } = req.body;
+    const { title, description, price, stock, categoryName, categoryNames, sizes } = req.body;
     const userId = req.userId;
     const authHeader = req.headers.authorization;
     const supabase = supabaseWithUserToken(authHeader);
@@ -225,6 +261,7 @@ export async function createProduct(req, res) {
         stock: stock ?? 0,
         status: 'pending',
         created_by: userId,
+        sizes: Array.isArray(sizes) && sizes.length > 0 ? sizes : null,
       })
       .select('id')
       .single();
@@ -251,7 +288,7 @@ export async function createProduct(req, res) {
 export async function updateProduct(req, res) {
   try {
     const { id } = req.params;
-    const { title, description, price, stock, categoryName, categoryNames } = req.body;
+    const { title, description, price, stock, categoryName, categoryNames, sizes } = req.body;
     const supabase = supabaseWithUserToken(req.headers.authorization);
 
     const { error } = await supabase
@@ -261,6 +298,7 @@ export async function updateProduct(req, res) {
         description: description ?? null,
         price,
         stock,
+        sizes: Array.isArray(sizes) && sizes.length > 0 ? sizes : null,
       })
       .eq('id', id);
 
@@ -307,34 +345,29 @@ export async function deleteProduct(req, res) {
   try {
     const { id } = req.params;
     const confirm = req.query.confirm || req.body?.confirm;
-    console.log('[DEBUG deleteProduct] id:', id, '| confirm:', confirm, '| query:', req.query, '| method:', req.method);
     if (confirm !== 'DELETE') {
-      console.log('[DEBUG deleteProduct] confirmation missing/wrong, returning 400');
       return res.status(400).json({
         error: 'Deletion requires confirmation. Add ?confirm=DELETE to the request.',
       });
     }
-    console.log('[DEBUG deleteProduct] deleting product_categories for', id);
-    await supabaseAdmin.from('product_categories').delete().eq('product_id', id);
-    console.log('[DEBUG deleteProduct] deleting product_media for', id);
-    await supabaseAdmin.from('product_media').delete().eq('product_id', id);
-    console.log('[DEBUG deleteProduct] deleting product', id);
 
-    // Use .select() so Supabase returns the deleted row(s) — lets us confirm the row was actually removed
-    const { data: deleted, error } = await supabaseAdmin
+    // Remove colour variants (cascades to product_media color_variant_id via SET NULL)
+    await supabaseAdmin.from('product_color_variants').delete().eq('product_id', id);
+    await supabaseAdmin.from('product_categories').delete().eq('product_id', id);
+    await supabaseAdmin.from('product_media').delete().eq('product_id', id);
+
+    const supabase = supabaseWithUserToken(req.headers.authorization);
+    const { data: deleted, error } = await supabase
       .from('products')
       .delete()
       .eq('id', id)
       .select('id');
 
-    console.log('[DEBUG deleteProduct] result — deleted rows:', deleted, '| error:', error);
-
     if (error) throw error;
     if (!deleted || deleted.length === 0) {
-      // Row not found or silently blocked by RLS
       return res.status(404).json({ error: 'Product not found or could not be deleted.' });
     }
-    console.log('[DEBUG deleteProduct] deleted OK', id);
+
     res.json({ ok: true });
   } catch (err) {
     console.error('deleteProduct:', err);
@@ -373,6 +406,7 @@ export async function uploadProductMedia(req, res) {
     const { id: productId } = req.params;
     const files = req.files || [];
     const makeFirstImagePrimary = req.body?.makeFirstImagePrimary === 'true';
+    const colorVariantId = req.body?.color_variant_id || null;
 
     if (!files.length) {
       return res.status(400).json({ error: 'No files uploaded' });
@@ -392,7 +426,7 @@ export async function uploadProductMedia(req, res) {
 
       if (upErr) throw upErr;
 
-      const isPrimary = makeFirstImagePrimary && i === 0 && mediaType === 'image';
+      const isPrimary = makeFirstImagePrimary && i === 0 && mediaType === 'image' && !colorVariantId;
       const { data: row, error: dbErr } = await supabaseAdmin
         .from('product_media')
         .insert({
@@ -401,6 +435,7 @@ export async function uploadProductMedia(req, res) {
           media_type: mediaType,
           position: 0,
           is_primary: isPrimary,
+          color_variant_id: colorVariantId || null,
         })
         .select()
         .single();
@@ -450,5 +485,126 @@ export async function setPrimaryMedia(req, res) {
   } catch (err) {
     console.error('setPrimaryMedia:', err);
     res.status(500).json({ error: err.message || 'Failed to set primary' });
+  }
+}
+
+// ---------- Colour variants (admin) ----------
+
+export async function listColorVariants(req, res) {
+  try {
+    const { id: productId } = req.params;
+
+    const { data: variants, error } = await supabaseAdmin
+      .from('product_color_variants')
+      .select('id, color_name, color_hex, is_default, position, created_at')
+      .eq('product_id', productId)
+      .order('position', { ascending: true });
+
+    if (error) throw error;
+
+    const variantIds = (variants || []).map((v) => v.id);
+    let mediaRows = [];
+    if (variantIds.length) {
+      const { data: mRows } = await supabaseAdmin
+        .from('product_media')
+        .select('id, file_path, media_type, is_primary, position, color_variant_id')
+        .in('color_variant_id', variantIds)
+        .order('position', { ascending: true });
+      mediaRows = mRows || [];
+    }
+
+    const result = (variants || []).map((v) => ({
+      ...v,
+      media: mediaRows
+        .filter((m) => m.color_variant_id === v.id)
+        .map((m) => ({ ...m, public_url: getProductMediaPublicUrl(m.file_path) })),
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error('listColorVariants:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch colour variants' });
+  }
+}
+
+export async function createColorVariant(req, res) {
+  try {
+    const { id: productId } = req.params;
+    const { color_name, color_hex, is_default, position } = req.body;
+
+    if (!color_name || !color_name.trim()) {
+      return res.status(400).json({ error: 'color_name is required' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('product_color_variants')
+      .insert({
+        product_id: productId,
+        color_name: color_name.trim(),
+        color_hex: color_hex || null,
+        is_default: is_default ?? false,
+        position: position ?? 0,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json({ ...data, media: [] });
+  } catch (err) {
+    console.error('createColorVariant:', err);
+    res.status(500).json({ error: err.message || 'Failed to create colour variant' });
+  }
+}
+
+export async function updateColorVariant(req, res) {
+  try {
+    const { variantId } = req.params;
+    const { color_name, color_hex, is_default, position } = req.body;
+
+    const updates = {};
+    if (color_name !== undefined) updates.color_name = color_name.trim();
+    if (color_hex !== undefined) updates.color_hex = color_hex || null;
+    if (is_default !== undefined) updates.is_default = is_default;
+    if (position !== undefined) updates.position = position;
+
+    const { error } = await supabaseAdmin
+      .from('product_color_variants')
+      .update(updates)
+      .eq('id', variantId);
+
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('updateColorVariant:', err);
+    res.status(500).json({ error: err.message || 'Failed to update colour variant' });
+  }
+}
+
+export async function deleteColorVariant(req, res) {
+  try {
+    const { variantId } = req.params;
+
+    // Remove storage files for media linked to this variant
+    const { data: mediaRows } = await supabaseAdmin
+      .from('product_media')
+      .select('id, file_path')
+      .eq('color_variant_id', variantId);
+
+    if (mediaRows && mediaRows.length) {
+      const paths = mediaRows.map((m) => m.file_path).filter(Boolean);
+      if (paths.length) await supabaseAdmin.storage.from(BUCKET).remove(paths);
+      await supabaseAdmin.from('product_media').delete().eq('color_variant_id', variantId);
+    }
+
+    const { error } = await supabaseAdmin
+      .from('product_color_variants')
+      .delete()
+      .eq('id', variantId);
+
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('deleteColorVariant:', err);
+    res.status(500).json({ error: err.message || 'Failed to delete colour variant' });
   }
 }

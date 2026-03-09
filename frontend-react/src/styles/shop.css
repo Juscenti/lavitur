@@ -1276,6 +1276,62 @@
   display: block;
 }
 
+/* Colour swatches */
+.pdp-color-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pdp-color-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--shop-line);
+  background: var(--shop-panel);
+  cursor: pointer;
+  padding: 2px;
+  display: grid;
+  place-items: center;
+  transition: border-color 0.2s ease, transform 0.18s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.pdp-color-btn:hover {
+  border-color: rgba(14, 15, 18, 0.4);
+  transform: scale(1.1);
+}
+
+.pdp-color-btn.selected {
+  border-color: var(--shop-text);
+  box-shadow: 0 0 0 2px var(--shop-text);
+  transform: scale(1.08);
+}
+
+.pdp-color-swatch {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+/* Label-style colour button (no hex set) */
+.pdp-color-btn:has(.pdp-color-label) {
+  width: auto;
+  height: 36px;
+  border-radius: 18px;
+  padding: 0 14px;
+}
+
+.pdp-color-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--shop-text);
+  white-space: nowrap;
+  font-family: var(--shop-sans);
+}
+
 /* Size & quantity options */
 .pdp-option {
   margin-bottom: 20px;

@@ -16,6 +16,10 @@ import {
   uploadProductMedia,
   deleteProductMedia,
   setPrimaryMedia,
+  listColorVariants,
+  createColorVariant,
+  updateColorVariant,
+  deleteColorVariant,
 } from '../controllers/productsController.js';
 
 const router = express.Router();
@@ -43,6 +47,12 @@ router.get('/products/:id/media', listProductMedia);
 router.post('/products/:id/media', upload.array('files', 10), uploadProductMedia);
 router.delete('/products/:id/media/:mediaId', deleteProductMedia);
 router.patch('/products/:id/media/:mediaId/primary', setPrimaryMedia);
+
+// Colour variants
+router.get('/products/:id/color-variants', listColorVariants);
+router.post('/products/:id/color-variants', createColorVariant);
+router.patch('/products/:id/color-variants/:variantId', updateColorVariant);
+router.delete('/products/:id/color-variants/:variantId', deleteColorVariant);
 
 // Orders
 router.get('/orders', adminOrders.listOrders);
