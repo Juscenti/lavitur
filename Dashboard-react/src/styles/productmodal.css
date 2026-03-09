@@ -923,6 +923,91 @@
   cursor: pointer;
 }
 
+/* ===== Upload-to colour picker ===== */
+.pmedia-target-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.pmedia-target-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255,255,255,.6);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pmedia-target-select {
+  flex: 1;
+  background: rgba(255,255,255,.07);
+  border: 1.5px solid rgba(47,107,255,.3);
+  border-radius: 10px;
+  color: rgba(255,255,255,.9);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 10px;
+  color-scheme: dark;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.pmedia-target-select:focus {
+  border-color: rgba(47,107,255,.6);
+}
+
+.pmedia-target-select option {
+  background: #1e1e22;
+}
+
+/* ===== Colour assignment row on media cards ===== */
+.media-color-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px 2px;
+}
+
+.media-color-dot {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.media-color-select {
+  flex: 1;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px;
+  color: rgba(255,255,255,.8);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 6px;
+  color-scheme: dark;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+  min-width: 0;
+}
+
+.media-color-select:focus,
+.media-color-select:hover {
+  border-color: rgba(47,107,255,.4);
+}
+
+.media-color-select option {
+  background: #1e1e22;
+}
+
 /* ===== Utility Animations ===== */
 @keyframes shimmer {
   0% { background-position: -200% center; }

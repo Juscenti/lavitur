@@ -1,125 +1,351 @@
-#ai-chat-drawer {
-  position: fixed;
-  bottom: 6rem;
-  right: 2rem;
-  width: 320px;
-  height: 400px;
-  background: white;
-  box-shadow: 0 0 15px rgba(0,0,0,0.2);
-  border-radius: 10px;
-  display: none;
-  flex-direction: column;
-  z-index: 9999;
-}
+/* =========================
+   Lavitúr AI Widget — Luxury Edition
+   Cinzel · Raleway · Gold accent
+   ========================= */
 
-#ai-chat-drawer.open {
-  display: flex;
-}
-#ai-chat-launcher {
+/* ---- Launcher button ---- */
+.ai-launcher {
   position: fixed;
   bottom: 2rem;
   right: 2rem;
-  width: 60px;
-  height: 60px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: #0f0e0c;
+  border: 1px solid rgba(184, 150, 90, 0.4);
+  color: #b8965a;
   cursor: pointer;
   z-index: 2000;
-}
-#ai-chat-launcher img {
-  width: 100%;
-  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
+  animation: ai-pulse 3.5s ease-in-out infinite;
 }
 
-#ai-chat-drawer {
+.ai-launcher:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.35), 0 0 0 6px rgba(184, 150, 90, 0.12);
+  animation: none;
+}
+
+.ai-launcher--hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.85);
+}
+
+.ai-launcher-spark {
+  font-size: 19px;
+  line-height: 1;
+  user-select: none;
+}
+
+@keyframes ai-pulse {
+  0%, 100% {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(184, 150, 90, 0.45);
+  }
+  55% {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 10px rgba(184, 150, 90, 0);
+  }
+}
+
+/* ---- Backdrop ---- */
+.ai-backdrop {
   position: fixed;
-  bottom: 0;
-  right: 0;
-  width: 360px;
-  height: 500px;
-  background: #fff;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-  transform: translateY(100%);
-  transition: transform 0.4s ease;
-  z-index: 2000;
+  inset: 0;
+  z-index: 2999;
+  background: transparent;
+}
+
+/* ---- Chat panel ---- */
+.ai-panel {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 380px;
+  height: 540px;
+  max-height: calc(100vh - 4rem);
+  background: #ffffff;
+  border: 1px solid rgba(15, 14, 12, 0.08);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.16),
+    0 6px 20px rgba(0, 0, 0, 0.07);
   display: flex;
   flex-direction: column;
+  z-index: 3000;
+  opacity: 0;
+  transform: translateY(16px) scale(0.97);
+  pointer-events: none;
+  transition:
+    opacity 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-#ai-chat-drawer.open {
-  transform: translateY(0);
+
+.ai-panel--open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: all;
 }
-.drawer-header {
+
+/* ---- Header ---- */
+.ai-panel-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  background: #111;
-  color: #fff;
+  justify-content: space-between;
+  padding: 16px 18px;
+  background: #0f0e0c;
+  flex-shrink: 0;
 }
-#ai-close {
-  background: transparent;
-  border: none;
-  font-size: 1.5rem;
-  color: #fff;
+
+.ai-panel-header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ai-header-spark {
+  color: #b8965a;
+  font-size: 17px;
+  line-height: 1;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.ai-panel-title {
+  font-family: "Cinzel", "Raleway", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  color: #ffffff;
+  margin: 0 0 3px;
+  line-height: 1;
+}
+
+.ai-panel-subtitle {
+  font-family: "Raleway", sans-serif;
+  font-size: 10px;
+  font-weight: 300;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0;
+  line-height: 1;
+}
+
+.ai-panel-close {
+  background: rgba(255, 255, 255, 0.1);
+  border: 0;
+  color: rgba(255, 255, 255, 0.6);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
   cursor: pointer;
-}
-#ai-chat-iframe {
-  flex: 1;
-  border: none;
-}
-
-
-.drawer-header {
-  padding: 1rem;
-  background: #111;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  font-size: 11px;
+  transition: background 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
 }
 
-.chat-body {
+.ai-panel-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+/* ---- Chat body ---- */
+.ai-body {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem;
-  background: #f8f8f8;
-}
-
-.chat-input-area {
+  padding: 20px 16px;
   display: flex;
-  padding: 0.5rem;
-  border-top: 1px solid #ccc;
-  background: white;
+  flex-direction: column;
+  gap: 12px;
+  background: #f9f8f6;
+  scroll-behavior: smooth;
 }
 
-.chat-input-area input {
-  flex: 1;
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+.ai-body::-webkit-scrollbar {
+  width: 3px;
 }
 
-.chat-input-area button {
-  margin-left: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: black;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+.ai-body::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.chat-message {
-  margin-bottom: 0.75rem;
-  padding: 0.75rem;
-  border-radius: 8px;
-  max-width: 85%;
+.ai-body::-webkit-scrollbar-thumb {
+  background: rgba(15, 14, 12, 0.14);
 }
 
-.chat-message.user {
-  background: #dcefff;
+/* ---- Messages ---- */
+.ai-msg {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  max-width: 90%;
+}
+
+.ai-msg--user {
   align-self: flex-end;
+  flex-direction: row-reverse;
 }
 
-.chat-message.ai {
-  background: #eeeeee;
+.ai-msg--ai {
   align-self: flex-start;
+}
+
+.ai-msg-avatar {
+  font-size: 9px;
+  color: #b8965a;
+  flex-shrink: 0;
+  padding-bottom: 4px;
+  line-height: 1;
+  user-select: none;
+}
+
+.ai-msg-text {
+  font-family: "Raleway", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.7;
+  margin: 0;
+  padding: 11px 14px;
+  letter-spacing: 0.02em;
+}
+
+.ai-msg--user .ai-msg-text {
+  background: #0f0e0c;
+  color: #ffffff;
+  border-radius: 18px 18px 4px 18px;
+}
+
+.ai-msg--ai .ai-msg-text {
+  background: #ffffff;
+  color: #0f0e0c;
+  border: 1px solid rgba(15, 14, 12, 0.08);
+  border-radius: 18px 18px 18px 4px;
+}
+
+/* ---- Typing indicator ---- */
+.ai-typing {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 14px 18px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 14, 12, 0.08);
+  border-radius: 18px 18px 18px 4px;
+}
+
+.ai-typing span {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #b8965a;
+  animation: ai-dot 1.3s ease-in-out infinite;
+}
+
+.ai-typing span:nth-child(2) { animation-delay: 0.18s; }
+.ai-typing span:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes ai-dot {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+/* ---- Input row ---- */
+.ai-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(15, 14, 12, 0.07);
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.ai-input-pill {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  background: #f4f3f1;
+  border-radius: 999px;
+  padding: 0 16px;
+  height: 40px;
+}
+
+.ai-input {
+  flex: 1;
+  min-width: 0;
+  font-family: "Raleway", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  color: #0f0e0c;
+  background: transparent;
+  border: 0;
+  outline: none;
+  padding: 0;
+}
+
+.ai-input::placeholder {
+  color: rgba(15, 14, 12, 0.35);
+  letter-spacing: 0.06em;
+}
+
+.ai-input:disabled {
+  opacity: 0.5;
+}
+
+.ai-send {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #0f0e0c;
+  color: #ffffff;
+  border: 0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  flex-shrink: 0;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.ai-send:hover:not(:disabled) {
+  background: #b8965a;
+  transform: scale(1.08);
+}
+
+.ai-send:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ---- Mobile ---- */
+@media (max-width: 480px) {
+  .ai-panel {
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    height: 72vh;
+    max-height: 72vh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .ai-launcher {
+    bottom: 1.5rem;
+    right: 1.5rem;
+  }
 }

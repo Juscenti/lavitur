@@ -308,16 +308,18 @@ export default function Shop() {
       <div class="card-image-wrap">
         ${badgeHtml}
         <img loading="lazy" src="${p.image_url || '/images/placeholder.jpg'}" alt="${(p.title || '').replace(/"/g, '&quot;')}" />
-      </div>
-      <h3 class="card-title">${(p.title || 'Untitled').replace(/</g, '&lt;')}</h3>
-      <p class="card-price">${formatMoney(p.price, 'JMD')}</p>
-      <div class="card-actions">
-        <button type="button" class="quick-view-btn" data-id="${p.id}" aria-label="Quick view"><i class="fas fa-eye"></i></button>
-        <button type="button" class="wishlist-btn ${wished ? 'is-wishlisted' : ''}" data-id="${p.id}" aria-label="${
+        <div class="card-actions">
+          <button type="button" class="quick-view-btn" data-id="${p.id}" aria-label="Quick view">Quick Look</button>
+          <button type="button" class="wishlist-btn ${wished ? 'is-wishlisted' : ''}" data-id="${p.id}" aria-label="${
         wished ? 'Remove from wishlist' : 'Add to wishlist'
       }">
-          <i class="${wished ? 'fas' : 'far'} fa-heart"></i>
-        </button>
+            <i class="${wished ? 'fas' : 'far'} fa-heart"></i>
+          </button>
+        </div>
+      </div>
+      <div class="card-info">
+        <h3 class="card-title">${(p.title || 'Untitled').replace(/</g, '&lt;')}</h3>
+        <p class="card-price">${formatMoney(p.price, 'JMD')}</p>
       </div>
     </a>
   `;
@@ -790,6 +792,12 @@ export default function Shop() {
 
   return (
     <div className="shop-page">
+      <div className="shop-banner">
+        <span className="shop-banner-eyebrow">Lavitúr</span>
+        <h1 className="shop-banner-title">The Collection</h1>
+        <p className="shop-banner-sub">Crafted for the discerning few</p>
+      </div>
+
       <div className="shop-layout">
         <header className="shop-toolbar">
           <div className="shop-toolbar-inner">

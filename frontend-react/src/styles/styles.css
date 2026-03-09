@@ -23,7 +23,7 @@
 
 /* Base body */
 body {
-  font-family: 'Urbanist', sans-serif;
+  font-family: 'Raleway', 'Urbanist', system-ui, sans-serif;
   color: #111;
   background: #fff;
   overflow-x: hidden;

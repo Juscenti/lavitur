@@ -15,6 +15,7 @@ import {
   listProductMedia,
   uploadProductMedia,
   deleteProductMedia,
+  reassignMediaColor,
   setPrimaryMedia,
   listColorVariants,
   createColorVariant,
@@ -46,6 +47,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 router.get('/products/:id/media', listProductMedia);
 router.post('/products/:id/media', upload.array('files', 10), uploadProductMedia);
 router.delete('/products/:id/media/:mediaId', deleteProductMedia);
+router.patch('/products/:id/media/:mediaId/color', reassignMediaColor);
 router.patch('/products/:id/media/:mediaId/primary', setPrimaryMedia);
 
 // Colour variants
