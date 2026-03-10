@@ -51,35 +51,66 @@ function getValidityEndMoment(isoOrDate) {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
 }
 
-function ValidityBadge({ code }) {
+const dateTimeOptions = { dateStyle: 'medium', timeStyle: 'short' };
+
+function ValidityCell({ code }) {
+  const now = new Date();
   if (code.active === false) {
-    return <span className="promotions-badge promotions-badge--inactive">Inactive</span>;
-  }
-  if (code.ends_at) {
-    const endMoment = getValidityEndMoment(code.ends_at);
-    const now = new Date();
-    if (endMoment && now > endMoment) {
-      return <span className="promotions-badge promotions-badge--ended">Ended</span>;
-    }
-    const displayEnd = endMoment || new Date(code.ends_at);
     return (
-      <span className="promotions-badge promotions-badge--ongoing" title={displayEnd.toLocaleString()}>
-        Until {displayEnd.toLocaleDateString()}
-      </span>
+      <div className="promotions-validity-cell">
+        <span className="promotions-badge promotions-badge--inactive">Inactive</span>
+        <span className="promotions-validity-detail">Turn on to enable</span>
+      </div>
     );
   }
-  if (code.starts_at) {
-    const start = new Date(code.starts_at);
-    const now = new Date();
-    if (now < start) {
-      return (
-        <span className="promotions-badge promotions-badge--inactive" title={start.toLocaleString()}>
-          From {start.toLocaleDateString()}
-        </span>
-      );
-    }
+  const start = code.starts_at ? new Date(code.starts_at) : null;
+  const endMoment = code.ends_at ? getValidityEndMoment(code.ends_at) : null;
+  const notStarted = start && now < start;
+  const ended = endMoment && now > endMoment;
+
+  if (ended) {
+    const displayEnd = endMoment || new Date(code.ends_at);
+    const endStr = displayEnd.toLocaleString(undefined, dateTimeOptions);
+    return (
+      <div className="promotions-validity-cell">
+        <span className="promotions-badge promotions-badge--ended">Ended</span>
+        <span className="promotions-validity-detail">Expired {endStr}</span>
+      </div>
+    );
   }
-  return <span className="promotions-badge promotions-badge--active">Ongoing</span>;
+  if (notStarted) {
+    const startStr = start.toLocaleString(undefined, dateTimeOptions);
+    return (
+      <div className="promotions-validity-cell">
+        <span className="promotions-badge promotions-badge--inactive">Not started</span>
+        <span className="promotions-validity-detail">Starts {startStr}</span>
+      </div>
+    );
+  }
+  if (endMoment) {
+    const endStr = endMoment.toLocaleString(undefined, dateTimeOptions);
+    return (
+      <div className="promotions-validity-cell">
+        <span className="promotions-badge promotions-badge--ongoing">Active</span>
+        <span className="promotions-validity-detail">Until {endStr}</span>
+      </div>
+    );
+  }
+  if (start) {
+    const startStr = start.toLocaleString(undefined, dateTimeOptions);
+    return (
+      <div className="promotions-validity-cell">
+        <span className="promotions-badge promotions-badge--active">Active</span>
+        <span className="promotions-validity-detail">Since {startStr}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="promotions-validity-cell">
+      <span className="promotions-badge promotions-badge--active">Active</span>
+      <span className="promotions-validity-detail">No end date</span>
+    </div>
+  );
 }
 
 function NewDiscountModal({ onClose, onCreated }) {
@@ -131,8 +162,8 @@ function NewDiscountModal({ onClose, onCreated }) {
         discount_percent: percent,
         active,
         usage_limit: usageLimit.trim() ? Number(usageLimit) : null,
-        starts_at: startsAt.trim() || null,
-        ends_at: endsAt.trim() || null,
+        starts_at: datetimeLocalToISO(startsAt),
+        ends_at: datetimeLocalToISO(endsAt),
         ambassador_id: selectedAmbassadorId.trim() || null,
         ambassador_profile_id: selectedAmbassadorId.trim() || null,
       });
@@ -289,6 +320,14 @@ function toDatetimeLocal(iso) {
   return `${y}-${m}-${day}T${h}:${min}`;
 }
 
+/** Convert datetime-local value (local time) to ISO UTC for backend. Prevents time shifting when DB stores without TZ. */
+function datetimeLocalToISO(localStr) {
+  if (!localStr || !String(localStr).trim()) return null;
+  const d = new Date(localStr);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
 function EditDiscountModal({ initialCode, onClose, onUpdated }) {
   const [code, setCode] = useState(initialCode?.code ?? '');
   const [discountPercent, setDiscountPercent] = useState(initialCode?.value != null ? String(initialCode.value) : '');
@@ -340,8 +379,8 @@ function EditDiscountModal({ initialCode, onClose, onUpdated }) {
         discount_percent: percent,
         active,
         usage_limit: usageLimit.trim() ? Number(usageLimit) : null,
-        starts_at: startsAt.trim() || null,
-        ends_at: endsAt.trim() || null,
+        starts_at: datetimeLocalToISO(startsAt),
+        ends_at: datetimeLocalToISO(endsAt),
         ambassador_id: selectedAmbassadorId.trim() || null,
         ambassador_profile_id: selectedAmbassadorId.trim() || null,
         campaign_name: campaignName.trim() || null,
@@ -607,7 +646,6 @@ export default function Promotions() {
                   <thead>
                     <tr>
                       <th>Code</th>
-                      <th>Type</th>
                       <th>Value</th>
                       <th>Ambassador</th>
                       <th>Campaign</th>
@@ -637,7 +675,6 @@ export default function Promotions() {
                               </button>
                             </div>
                           </td>
-                          <td>{c.type || 'percent'}</td>
                           <td>
                             {c.type === 'percent'
                               ? `${c.value ?? '—'}%`
@@ -665,8 +702,8 @@ export default function Promotions() {
                             )}
                           </td>
                           <td>{c.revenue != null ? formatCurrency(c.revenue) : '—'}</td>
-                          <td>
-                            <ValidityBadge code={c} />
+                          <td className="promotions-validity-td">
+                            <ValidityCell code={c} />
                           </td>
                           <td>
                             <div className="promotions-actions-cell">
