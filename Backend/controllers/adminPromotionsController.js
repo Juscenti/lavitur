@@ -1,6 +1,46 @@
 // Backend/controllers/adminPromotionsController.js
 import { supabaseAdmin } from '../config/supabase.js';
 
+/** Ambassadors who do not yet have a discount code assigned (for the "new discount" modal). */
+export async function getAmbassadorsWithoutCode(req, res) {
+  try {
+    const [
+      { data: ambassadors, error: ambError },
+      { data: codes, error: codesError },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from('profiles')
+        .select('id, full_name, email')
+        .eq('role', 'ambassador')
+        .order('full_name'),
+      supabaseAdmin
+        .from('discount_codes')
+        .select('ambassador_id, ambassador_profile_id'),
+    ]);
+
+    if (ambError) throw ambError;
+    if (codesError && codesError.code !== '42P01') throw codesError;
+
+    const assignedIds = new Set();
+    (codes || []).forEach((c) => {
+      if (c.ambassador_id) assignedIds.add(c.ambassador_id);
+      if (c.ambassador_profile_id) assignedIds.add(c.ambassador_profile_id);
+    });
+
+    const withoutCode = (ambassadors || []).filter((a) => !assignedIds.has(a.id));
+    res.json({
+      ambassadors: withoutCode.map((a) => ({
+        id: a.id,
+        full_name: a.full_name ?? '',
+        email: a.email ?? '',
+      })),
+    });
+  } catch (err) {
+    console.error('getAmbassadorsWithoutCode:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch ambassadors' });
+  }
+}
+
 export async function listDiscountCodes(req, res) {
   try {
     const { active, ambassador_only } = req.query;

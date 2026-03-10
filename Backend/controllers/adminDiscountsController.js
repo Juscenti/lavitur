@@ -23,6 +23,7 @@ export async function createDiscount(req, res) {
       discount_percent,
       active = true,
       ambassador_id,
+      ambassador_profile_id,
       usage_limit,
       starts_at,
       ends_at,
@@ -32,15 +33,21 @@ export async function createDiscount(req, res) {
       return res.status(400).json({ error: 'code and discount_percent required' });
     }
 
-    const { error } = await supabaseAdmin.from('discount_codes').insert({
+    const ambassadorProfileId = ambassador_profile_id || ambassador_id || null;
+    const payload = {
       code: String(code).trim(),
       discount_percent: Number(discount_percent),
       active: !!active,
-      ambassador_id: ambassador_id || null,
       usage_limit: usage_limit ? Number(usage_limit) : null,
       starts_at: starts_at || null,
       ends_at: ends_at || null,
-    });
+    };
+    if (ambassadorProfileId) {
+      payload.ambassador_id = ambassadorProfileId;
+      payload.ambassador_profile_id = ambassadorProfileId;
+    }
+
+    const { error } = await supabaseAdmin.from('discount_codes').insert(payload);
 
     if (error) throw error;
     res.status(201).json({ ok: true });

@@ -90,6 +90,7 @@ router.get('/analytics/overview', adminAnalytics.getOverview);
 
 // Promotions (discount codes + ambassador performance)
 router.get('/promotions/discount-codes', adminPromotions.listDiscountCodes);
+router.get('/promotions/ambassadors-without-code', adminPromotions.getAmbassadorsWithoutCode);
 
 // Loyalty
 router.get('/loyalty/overview', adminLoyalty.getOverview);

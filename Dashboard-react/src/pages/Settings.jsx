@@ -1,9 +1,25 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 
-function Status({ loading, error }) {
-  if (loading) return <p>Loading settings…</p>;
-  if (error) return <p className="error">{error}</p>;
+function Status({ loading, error, onRetry }) {
+  if (loading) {
+    return (
+      <div className="settings-loading">
+        <div className="settings-loading-spinner" aria-hidden />
+        <p>Loading settings…</p>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="alert alert-error">
+        <span>{error}</span>
+        <button type="button" className="btn btn-primary" onClick={onRetry}>
+          Retry
+        </button>
+      </div>
+    );
+  }
   return null;
 }
 
@@ -14,28 +30,18 @@ export default function Settings() {
   const [error, setError] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchSettings = () => {
     setLoading(true);
     setError('');
-
     api
       .get('/admin/settings')
-      .then((data) => {
-        if (cancelled) return;
-        setSettings(data || {});
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(err?.message || 'Failed to load settings.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      .then((data) => setSettings(data || {}))
+      .catch((err) => setError(err?.message || 'Failed to load settings.'))
+      .finally(() => setLoading(false));
+  };
 
-    return () => {
-      cancelled = true;
-    };
+  useEffect(() => {
+    fetchSettings();
   }, []);
 
   const handleChange = (section, key, value) => {
@@ -48,27 +54,11 @@ export default function Settings() {
     }));
   };
 
-  const handleSave = () => {
-    if (!settings) return;
-    setSaving(true);
-    setSaveMessage('');
-    setError('');
-
-    api
-      .put
-      // Using api.patch would also be fine; the backend decides how to merge.
-      // eslint-disable-next-line prefer-template
-      ?('/admin/settings', settings)
-      : api.patch('/admin/settings', settings);
-  };
-
-  // The above conditional is intentionally awkward; simplify by always using patch:
   const save = () => {
     if (!settings) return;
     setSaving(true);
     setSaveMessage('');
     setError('');
-
     api
       .patch('/admin/settings', settings)
       .then(() => {
@@ -87,93 +77,117 @@ export default function Settings() {
       <header className="panel-header">
         <div>
           <h1>Settings</h1>
-          <p className="panel-subtitle">Global configuration for the storefront and admin tools.</p>
+          <p className="panel-subtitle">
+            Global configuration for the storefront and admin tools. Edit below and save when ready.
+          </p>
         </div>
         <button
           type="button"
-          className="btn primary"
-          disabled={saving}
+          className="btn btn-primary"
+          disabled={saving || loading}
           onClick={save}
         >
           {saving ? 'Saving…' : 'Save changes'}
         </button>
       </header>
 
-      <Status loading={loading} error={error} />
-      {saveMessage && <p className="success">{saveMessage}</p>}
+      <Status loading={loading} error={error} onRetry={fetchSettings} />
+
+      {saveMessage && (
+        <div className="settings-message settings-message--success" role="status">
+          {saveMessage}
+        </div>
+      )}
 
       {!loading && settings && (
         <div className="panel-columns">
-          <section className="panel-section">
+          <section className="settings-section-card">
             <h2>General</h2>
-            <label>
-              Store name
+            <p className="section-desc">Store identity and support contact.</p>
+            <div className="settings-form-row">
+              <label htmlFor="settings-store-name">Store name</label>
               <input
+                id="settings-store-name"
                 type="text"
-                value={settings.general?.name || ''}
+                value={settings.general?.name ?? ''}
                 onChange={(e) => handleChange('general', 'name', e.target.value)}
+                placeholder="My Store"
               />
-            </label>
-            <label>
-              Support email
+            </div>
+            <div className="settings-form-row">
+              <label htmlFor="settings-support-email">Support email</label>
               <input
+                id="settings-support-email"
                 type="email"
-                value={settings.general?.supportEmail || ''}
+                value={settings.general?.supportEmail ?? ''}
                 onChange={(e) => handleChange('general', 'supportEmail', e.target.value)}
+                placeholder="support@example.com"
               />
-            </label>
-            <label>
-              Support phone
+            </div>
+            <div className="settings-form-row">
+              <label htmlFor="settings-support-phone">Support phone</label>
               <input
+                id="settings-support-phone"
                 type="tel"
-                value={settings.general?.supportPhone || ''}
+                value={settings.general?.supportPhone ?? ''}
                 onChange={(e) => handleChange('general', 'supportPhone', e.target.value)}
+                placeholder="+1 234 567 8900"
               />
-            </label>
+            </div>
           </section>
 
-          <section className="panel-section">
+          <section className="settings-section-card">
             <h2>Checkout & payments</h2>
-            <label>
-              Minimum order total (JMD)
+            <p className="section-desc">Order minimums and payment options.</p>
+            <div className="settings-form-row">
+              <label htmlFor="settings-min-order">Minimum order total (JMD)</label>
               <input
+                id="settings-min-order"
                 type="number"
+                min="0"
+                step="1"
                 value={settings.checkout?.minOrderTotal ?? ''}
                 onChange={(e) =>
-                  handleChange('checkout', 'minOrderTotal', Number(e.target.value) || 0)
+                  handleChange('checkout', 'minOrderTotal', e.target.value === '' ? '' : Number(e.target.value))
                 }
+                placeholder="0"
               />
-            </label>
-            <label className="checkbox">
+            </div>
+            <div className="settings-form-row checkbox-row">
               <input
+                id="settings-cod"
                 type="checkbox"
                 checked={!!settings.checkout?.codEnabled}
                 onChange={(e) => handleChange('checkout', 'codEnabled', e.target.checked)}
               />
-              <span>Enable cash on delivery</span>
-            </label>
+              <label htmlFor="settings-cod">Enable cash on delivery</label>
+            </div>
           </section>
 
-          <section className="panel-section">
+          <section className="settings-section-card">
             <h2>Loyalty defaults</h2>
-            <label>
-              Points per JMD
+            <p className="section-desc">Points earning rate.</p>
+            <div className="settings-form-row">
+              <label htmlFor="settings-earn-rate">Points per JMD</label>
               <input
+                id="settings-earn-rate"
                 type="number"
+                min="0"
+                step="0.01"
                 value={settings.loyalty?.earnRatePerDollar ?? ''}
                 onChange={(e) =>
                   handleChange(
                     'loyalty',
                     'earnRatePerDollar',
-                    Number(e.target.value) || 0,
+                    e.target.value === '' ? '' : Number(e.target.value)
                   )
                 }
+                placeholder="0.1"
               />
-            </label>
+            </div>
           </section>
         </div>
       )}
     </section>
   );
 }
-
