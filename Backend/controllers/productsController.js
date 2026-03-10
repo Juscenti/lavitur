@@ -508,15 +508,18 @@ export async function reassignMediaColor(req, res) {
   try {
     const { id: productId, mediaId } = req.params;
     const { color_variant_id } = req.body;
-    const supabase = supabaseWithUserToken(req.headers.authorization);
-
-    const { error } = await supabase
+    // Use service role so update is not blocked by RLS (route is already admin-only).
+    const { data, error } = await supabaseAdmin
       .from('product_media')
       .update({ color_variant_id: color_variant_id || null })
       .eq('id', mediaId)
-      .eq('product_id', productId);
+      .eq('product_id', productId)
+      .select('id');
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: 'Media row not found or could not be updated.' });
+    }
     res.json({ ok: true });
   } catch (err) {
     console.error('reassignMediaColor:', err);

@@ -116,6 +116,8 @@ export default function Products() {
   const [mediaList, setMediaList] = useState([]);
   const [mediaFiles, setMediaFiles] = useState([]);
   const [uploadTargetVariantId, setUploadTargetVariantId] = useState(null);
+  /** Add mode: which colour to assign new uploads to (null/'' = Main, or variant _tempId) */
+  const [uploadTargetTempId, setUploadTargetTempId] = useState(null);
 
   // Delete
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -238,6 +240,7 @@ export default function Products() {
     setModalProductId(null);
     setMediaFiles([]);
     setUploadTargetVariantId(null);
+    setUploadTargetTempId(null);
     setFormSizesEnabled(false);
     setFormSizes([]);
     setColorVariantsEnabled(false);
@@ -323,7 +326,14 @@ export default function Products() {
 
   const handleMediaInput = (e) => {
     const files = [...(e.target.files || [])];
-    setMediaFiles((prev) => [...prev, ...files]);
+    if (!files.length) return;
+    if (uploadTargetTempId) {
+      const variant = colorVariants.find((v) => v._tempId === uploadTargetTempId);
+      if (variant) handleAddTempVariantFiles(variant, files);
+    } else {
+      setMediaFiles((prev) => [...prev, ...files]);
+    }
+    e.target.value = '';
   };
 
   useEffect(() => {
@@ -345,12 +355,20 @@ export default function Products() {
   };
 
   const handleMediaReassign = async (mediaRow, newVariantId) => {
-    await api.patch(`/admin/products/${modalProductId}/media/${mediaRow.id}/color`, {
-      color_variant_id: newVariantId || null,
-    });
-    const list = await listProductMedia(modalProductId);
-    setMediaList(list);
-    if (colorVariantsEnabled) await reloadVariants();
+    if (!modalProductId) return;
+    try {
+      await api.patch(`/admin/products/${modalProductId}/media/${mediaRow.id}/color`, {
+        color_variant_id: newVariantId || null,
+      });
+      const list = await listProductMedia(modalProductId);
+      setMediaList(list);
+      if (colorVariantsEnabled) await reloadVariants();
+    } catch (err) {
+      console.error('handleMediaReassign:', err);
+      alert(err?.data?.error || err?.message || 'Failed to change photo colour.');
+      const list = await listProductMedia(modalProductId);
+      setMediaList(list);
+    }
   };
 
   const handleDeleteMedia = async (m) => {
@@ -459,6 +477,10 @@ export default function Products() {
         return { ...vv, files: next };
       })
     );
+  };
+
+  const removeMainFile = (index) => {
+    setMediaFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const openDeleteModal = (prod) => {
@@ -1048,20 +1070,33 @@ export default function Products() {
                   </div>
                 </div>
 
-                {/* Upload target picker — only in edit mode when saved colour variants exist */}
-                {modalProductId && colorVariantsEnabled && colorVariants.some((v) => v.id) && (
+                {/* Upload target picker — Edit: saved variant ids; Add: temp variants so uploads assign to colour before save */}
+                {colorVariantsEnabled && colorVariants.length > 0 && (
                   <div className="pmedia-target-row">
                     <span className="pmedia-target-label">Upload to</span>
-                    <select
-                      className="pmedia-target-select"
-                      value={uploadTargetVariantId || ''}
-                      onChange={(e) => setUploadTargetVariantId(e.target.value || null)}
-                    >
-                      <option value="">Main (no colour)</option>
-                      {colorVariants.filter((v) => v.id).map((v) => (
-                        <option key={v.id} value={v.id}>{v.color_name}</option>
-                      ))}
-                    </select>
+                    {modalProductId ? (
+                      <select
+                        className="pmedia-target-select"
+                        value={uploadTargetVariantId || ''}
+                        onChange={(e) => setUploadTargetVariantId(e.target.value || null)}
+                      >
+                        <option value="">Main (no colour)</option>
+                        {colorVariants.filter((v) => v.id).map((v) => (
+                          <option key={v.id} value={v.id}>{v.color_name}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <select
+                        className="pmedia-target-select"
+                        value={uploadTargetTempId || ''}
+                        onChange={(e) => setUploadTargetTempId(e.target.value || null)}
+                      >
+                        <option value="">Main (no colour)</option>
+                        {colorVariants.filter((v) => v._tempId).map((v) => (
+                          <option key={v._tempId} value={v._tempId}>{v.color_name}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 )}
 
@@ -1098,12 +1133,15 @@ export default function Products() {
                                 />
                                 <select
                                   className="media-color-select"
-                                  value={m.color_variant_id || ''}
-                                  onChange={(e) => handleMediaReassign(m, e.target.value || null)}
+                                  value={m.color_variant_id ? String(m.color_variant_id) : ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    handleMediaReassign(m, val === '' ? null : val);
+                                  }}
                                 >
                                   <option value="">Main</option>
                                   {colorVariants.filter((v) => v.id).map((v) => (
-                                    <option key={v.id} value={v.id}>{v.color_name}</option>
+                                    <option key={v.id} value={String(v.id)}>{v.color_name}</option>
                                   ))}
                                 </select>
                               </div>
@@ -1119,17 +1157,56 @@ export default function Products() {
                           </div>
                         );
                       })
-                    : mediaFiles.length
-                      ? mediaFiles.map((f, i) => (
-                          <div key={i} className="media-card">
-                            {f.type.startsWith('video/') ? (
-                              <video src={URL.createObjectURL(f)} controls />
-                            ) : (
-                              <img src={URL.createObjectURL(f)} alt="preview" />
+                    : (() => {
+                        const hasMain = mediaFiles.length > 0;
+                        const variantEntries = colorVariants.filter((v) => v._tempId && Array.isArray(v.files) && v.files.length > 0);
+                        const hasAny = hasMain || variantEntries.length > 0;
+                        if (!hasAny) {
+                          return <div style={{ opacity: 0.7 }}>Select images, then click Save to upload them. Use &quot;Upload to&quot; above to assign photos to a colour.</div>;
+                        }
+                        return (
+                          <>
+                            {mediaFiles.map((f, i) => (
+                              <div key={`main-${i}`} className="media-card">
+                                {f.type.startsWith('video/') ? (
+                                  <video src={URL.createObjectURL(f)} controls />
+                                ) : (
+                                  <img src={URL.createObjectURL(f)} alt="preview" />
+                                )}
+                                {colorVariantsEnabled && (
+                                  <div className="media-color-row">
+                                    <span className="media-color-dot" style={{ border: '1.5px solid rgba(255,255,255,.3)', background: 'transparent' }} />
+                                    <span className="media-color-select" style={{ cursor: 'default' }}>Main</span>
+                                  </div>
+                                )}
+                                <div className="media-actions">
+                                  <button type="button" className="delete" onClick={() => removeMainFile(i)}>Delete</button>
+                                </div>
+                              </div>
+                            ))}
+                            {variantEntries.map((v) =>
+                              (v.files || []).map((f, fi) => (
+                                <div key={`${v._tempId}-${fi}`} className="media-card">
+                                  {f.type.startsWith('video/') ? (
+                                    <video src={URL.createObjectURL(f)} controls />
+                                  ) : (
+                                    <img src={URL.createObjectURL(f)} alt={v.color_name} />
+                                  )}
+                                  {colorVariantsEnabled && (
+                                    <div className="media-color-row">
+                                      <span className="media-color-dot" style={{ background: v.color_hex || '#888' }} />
+                                      <span className="media-color-select" style={{ cursor: 'default' }}>{v.color_name}</span>
+                                    </div>
+                                  )}
+                                  <div className="media-actions">
+                                    <button type="button" className="delete" onClick={() => removeTempVariantFile(v, fi)}>Delete</button>
+                                  </div>
+                                </div>
+                              ))
                             )}
-                          </div>
-                        ))
-                      : <div style={{ opacity: 0.7 }}>Select images, then click Save to upload them.</div>}
+                          </>
+                        );
+                      })()}
                 </div>
               </div>
             </aside>
