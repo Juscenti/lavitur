@@ -254,6 +254,210 @@ function NewDiscountModal({ onClose, onCreated }) {
   );
 }
 
+function toDatetimeLocal(iso) {
+  if (!iso) return '';
+  const s = iso.slice(0, 19).replace('Z', '');
+  return s.length === 10 ? s + 'T00:00' : s.slice(0, 16);
+}
+
+function EditDiscountModal({ initialCode, onClose, onUpdated }) {
+  const [code, setCode] = useState(initialCode?.code ?? '');
+  const [discountPercent, setDiscountPercent] = useState(initialCode?.value != null ? String(initialCode.value) : '');
+  const [usageLimit, setUsageLimit] = useState(initialCode?.usage_limit != null ? String(initialCode.usage_limit) : '');
+  const [startsAt, setStartsAt] = useState(toDatetimeLocal(initialCode?.starts_at));
+  const [endsAt, setEndsAt] = useState(toDatetimeLocal(initialCode?.ends_at));
+  const [active, setActive] = useState(initialCode?.active !== false);
+  const [selectedAmbassadorId, setSelectedAmbassadorId] = useState(initialCode?.ambassador_id ?? '');
+  const [campaignName, setCampaignName] = useState(initialCode?.campaign_name ?? '');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [ambassadorsWithoutCode, setAmbassadorsWithoutCode] = useState([]);
+  const [ambassadorsLoading, setAmbassadorsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAmbassadorsLoading(true);
+    const params = initialCode?.id ? `?exclude_code_id=${initialCode.id}` : '';
+    api
+      .get(`/admin/promotions/ambassadors-without-code${params}`)
+      .then((data) => {
+        if (!cancelled) setAmbassadorsWithoutCode(data?.ambassadors || []);
+      })
+      .catch(() => {
+        if (!cancelled) setAmbassadorsWithoutCode([]);
+      })
+      .finally(() => {
+        if (!cancelled) setAmbassadorsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [initialCode?.id]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    const percent = discountPercent === '' ? null : Number(discountPercent);
+    if (!code.trim()) {
+      setError('Discount code is required.');
+      return;
+    }
+    if (percent != null && (Number.isNaN(percent) || percent < 0 || percent > 100)) {
+      setError('Discount percentage must be between 0 and 100.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await api.patch(`/admin/discounts/${initialCode.id}`, {
+        code: code.trim().toUpperCase(),
+        discount_percent: percent,
+        active,
+        usage_limit: usageLimit.trim() ? Number(usageLimit) : null,
+        starts_at: startsAt.trim() || null,
+        ends_at: endsAt.trim() || null,
+        ambassador_id: selectedAmbassadorId.trim() || null,
+        ambassador_profile_id: selectedAmbassadorId.trim() || null,
+        campaign_name: campaignName.trim() || null,
+      });
+      onUpdated();
+      onClose();
+    } catch (err) {
+      setError(err?.message || 'Failed to update discount.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="promotions-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-discount-title">
+      <div className="promotions-modal-backdrop" onClick={onClose} aria-hidden />
+      <div className="promotions-modal">
+        <header className="promotions-modal-header">
+          <div className="promotions-modal-header-text">
+            <h2 id="edit-discount-title" className="promotions-modal-title">Edit discount code</h2>
+            <p className="promotions-modal-desc">
+              Update code, percentage, dates, or assign a different ambassador. Turn Active on to reactivate.
+            </p>
+          </div>
+        </header>
+        <form onSubmit={handleSubmit}>
+          <div className="promotions-modal-body">
+            <section className="promotions-modal-section" aria-labelledby="edit-section-details">
+              <h3 id="edit-section-details" className="promotions-modal-section-title">Discount details</h3>
+              <div className="form-row">
+                <label htmlFor="edit-promo-code">Code<span className="required">*</span></label>
+                <input
+                  id="edit-promo-code"
+                  type="text"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. SAVE20"
+                  autoComplete="off"
+                  maxLength={32}
+                />
+              </div>
+              <div className="form-row">
+                <label htmlFor="edit-promo-percent">Discount %<span className="required">*</span></label>
+                <input
+                  id="edit-promo-percent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(e.target.value)}
+                  placeholder="15"
+                />
+              </div>
+              <div className="form-row">
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
+                  <span>Active (turn off to disable this code)</span>
+                </label>
+              </div>
+              <div className="form-row">
+                <label htmlFor="edit-promo-campaign">Campaign name</label>
+                <input
+                  id="edit-promo-campaign"
+                  type="text"
+                  value={campaignName}
+                  onChange={(e) => setCampaignName(e.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+            </section>
+
+            <section className="promotions-modal-section" aria-labelledby="edit-section-validity">
+              <h3 id="edit-section-validity" className="promotions-modal-section-title">Validity & limits</h3>
+              <div className="form-row">
+                <label htmlFor="edit-promo-usage">Usage limit</label>
+                <input
+                  id="edit-promo-usage"
+                  type="number"
+                  min="1"
+                  value={usageLimit}
+                  onChange={(e) => setUsageLimit(e.target.value)}
+                  placeholder="Unlimited"
+                />
+              </div>
+              <div className="form-row">
+                <label htmlFor="edit-promo-starts">Start</label>
+                <input
+                  id="edit-promo-starts"
+                  type="datetime-local"
+                  value={startsAt}
+                  onChange={(e) => setStartsAt(e.target.value)}
+                />
+              </div>
+              <div className="form-row">
+                <label htmlFor="edit-promo-ends">End</label>
+                <input
+                  id="edit-promo-ends"
+                  type="datetime-local"
+                  value={endsAt}
+                  onChange={(e) => setEndsAt(e.target.value)}
+                />
+              </div>
+            </section>
+
+            <section className="promotions-modal-section" aria-labelledby="edit-section-ambassador">
+              <h3 id="edit-section-ambassador" className="promotions-modal-section-title">Ambassador</h3>
+              <div className="form-row">
+                <label htmlFor="edit-promo-ambassador">Assign to</label>
+                {ambassadorsLoading ? (
+                  <p className="ambassador-loading">Loading…</p>
+                ) : (
+                  <>
+                    <select
+                      id="edit-promo-ambassador"
+                      value={selectedAmbassadorId}
+                      onChange={(e) => setSelectedAmbassadorId(e.target.value)}
+                    >
+                      <option value="">No ambassador</option>
+                      {ambassadorsWithoutCode.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.full_name || 'Unnamed'} {a.email ? `(${a.email})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="form-hint">Current ambassador is included so you can keep or change.</p>
+                  </>
+                )}
+              </div>
+            </section>
+
+            {error && <p className="error-inline">{error}</p>}
+          </div>
+          <div className="promotions-modal-actions">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              {submitting ? 'Saving…' : 'Save changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function Promotions() {
   const [codes, setCodes] = useState([]);
   const [onlyActive, setOnlyActive] = useState(true);
@@ -261,6 +465,7 @@ export default function Promotions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showNewModal, setShowNewModal] = useState(false);
+  const [editingCode, setEditingCode] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
   const fetchCodes = () => {
@@ -435,13 +640,24 @@ export default function Promotions() {
                             <ValidityBadge code={c} />
                           </td>
                           <td>
-                            <button
-                              type="button"
-                              className={`promotions-toggle-active promotions-toggle-active--${c.active !== false ? 'on' : 'off'}`}
-                              onClick={() => handleToggleActive(c.id, c.active !== false)}
-                            >
-                              {c.active !== false ? 'On' : 'Off'}
-                            </button>
+                            <div className="promotions-actions-cell">
+                              <button
+                                type="button"
+                                className={`promotions-toggle-active promotions-toggle-active--${c.active !== false ? 'on' : 'off'}`}
+                                onClick={() => handleToggleActive(c.id, c.active !== false)}
+                                title={c.active !== false ? 'Turn off' : 'Reactivate'}
+                              >
+                                {c.active !== false ? 'On' : 'Off'}
+                              </button>
+                              <button
+                                type="button"
+                                className="promotions-edit-btn"
+                                onClick={() => setEditingCode(c)}
+                                title="Edit code"
+                              >
+                                Edit
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -458,6 +674,13 @@ export default function Promotions() {
         <NewDiscountModal
           onClose={() => setShowNewModal(false)}
           onCreated={fetchCodes}
+        />
+      )}
+      {editingCode && (
+        <EditDiscountModal
+          initialCode={editingCode}
+          onClose={() => setEditingCode(null)}
+          onUpdated={fetchCodes}
         />
       )}
     </section>

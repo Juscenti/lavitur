@@ -76,7 +76,9 @@ router.get('/dashboard', adminDashboard.getMetrics);
 
 // Discounts
 router.get('/discounts', adminDiscounts.listDiscounts);
+router.get('/discounts/:id', adminDiscounts.getDiscount);
 router.post('/discounts', adminDiscounts.createDiscount);
+router.patch('/discounts/:id', adminDiscounts.updateDiscount);
 router.patch('/discounts/:id/active', adminDiscounts.updateDiscountActive);
 
 // Content

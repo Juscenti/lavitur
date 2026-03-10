@@ -1,9 +1,10 @@
 // Backend/controllers/adminPromotionsController.js
 import { supabaseAdmin } from '../config/supabase.js';
 
-/** Ambassadors who do not yet have a discount code assigned (for the "new discount" modal). */
+/** Ambassadors who do not yet have a discount code assigned (for the "new discount" modal). Query param exclude_code_id: when editing, exclude that code so its current ambassador still appears. */
 export async function getAmbassadorsWithoutCode(req, res) {
   try {
+    const excludeCodeId = req.query.exclude_code_id || null;
     const [
       { data: ambassadors, error: ambError },
       { data: codes, error: codesError },
@@ -15,7 +16,7 @@ export async function getAmbassadorsWithoutCode(req, res) {
         .order('full_name'),
       supabaseAdmin
         .from('discount_codes')
-        .select('ambassador_id, ambassador_profile_id'),
+        .select('id, ambassador_id, ambassador_profile_id'),
     ]);
 
     if (ambError) throw ambError;
@@ -23,6 +24,7 @@ export async function getAmbassadorsWithoutCode(req, res) {
 
     const assignedIds = new Set();
     (codes || []).forEach((c) => {
+      if (excludeCodeId && c.id === excludeCodeId) return;
       if (c.ambassador_id) assignedIds.add(c.ambassador_id);
       if (c.ambassador_profile_id) assignedIds.add(c.ambassador_profile_id);
     });
