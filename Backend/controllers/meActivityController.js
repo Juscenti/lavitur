@@ -48,6 +48,22 @@ function formatDescription(row) {
     }
     case 'avatar_updated':
       return 'Updated profile picture.';
+    case 'address_added': {
+      const label = meta.label || 'address';
+      return `Added a new ${label}.`;
+    }
+    case 'address_updated': {
+      const label = meta.label || 'address';
+      return `Updated ${label}.`;
+    }
+    case 'address_removed': {
+      const label = meta.label || 'address';
+      return `Removed ${label}.`;
+    }
+    case 'address_set_default': {
+      const label = meta.label || 'address';
+      return `Set ${label} as default address.`;
+    }
     default:
       return meta.description || 'Did something on Lavitúr.';
   }

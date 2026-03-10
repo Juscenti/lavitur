@@ -171,6 +171,15 @@ export async function removeCartItem(req, res) {
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const id = req.params.id;
+
+    // Fetch minimal info before delete so activity can include context.
+    const { data: existing } = await supabaseAdmin
+      .from('cart_items')
+      .select('id, product_id, size, quantity')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
     const { error } = await supabaseAdmin
       .from('cart_items')
       .delete()
@@ -178,6 +187,18 @@ export async function removeCartItem(req, res) {
       .eq('user_id', userId);
 
     if (error) throw error;
+
+    if (existing) {
+      logUserActivity(userId, 'cart_item_removed', {
+        cart_item_id: existing.id,
+        product_id: existing.product_id,
+        size: existing.size ?? null,
+        quantity: existing.quantity ?? 1,
+      });
+    } else {
+      logUserActivity(userId, 'cart_item_removed', { cart_item_id: id });
+    }
+
     res.status(204).send();
   } catch (err) {
     console.error('removeCartItem:', err);

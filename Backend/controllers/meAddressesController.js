@@ -1,5 +1,6 @@
 // Backend/controllers/meAddressesController.js — /api/me/addresses
 import { supabaseAdmin } from '../config/supabase.js';
+import { logUserActivity } from '../lib/activityLogger.js';
 
 /** GET /api/me/addresses — list current user's addresses (default first) */
 export async function listAddresses(req, res) {
@@ -57,6 +58,12 @@ export async function createAddress(req, res) {
       .single();
 
     if (error) throw error;
+
+    logUserActivity(userId, 'address_added', {
+      address_id: data.id,
+      label: data.label || null,
+    });
+
     res.status(201).json(data);
   } catch (err) {
     console.error('createAddress:', err);
@@ -105,6 +112,13 @@ export async function updateAddress(req, res) {
 
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Address not found' });
+
+    logUserActivity(userId, 'address_updated', {
+      address_id: data.id,
+      label: data.label || null,
+      is_default: data.is_default ?? false,
+    });
+
     res.json(data);
   } catch (err) {
     console.error('updateAddress:', err);
@@ -118,13 +132,28 @@ export async function deleteAddress(req, res) {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
+    const id = req.params.id;
+
+    const { data: existing } = await supabaseAdmin
+      .from('user_addresses')
+      .select('id, label')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
     const { error } = await supabaseAdmin
       .from('user_addresses')
       .delete()
-      .eq('id', req.params.id)
+      .eq('id', id)
       .eq('user_id', userId);
 
     if (error) throw error;
+
+    logUserActivity(userId, 'address_removed', {
+      address_id: existing?.id || id,
+      label: existing?.label || null,
+    });
+
     res.status(204).send();
   } catch (err) {
     console.error('deleteAddress:', err);
@@ -155,6 +184,12 @@ export async function setDefaultAddress(req, res) {
 
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Address not found' });
+
+    logUserActivity(userId, 'address_set_default', {
+      address_id: data.id,
+      label: data.label || null,
+    });
+
     res.json(data);
   } catch (err) {
     console.error('setDefaultAddress:', err);
