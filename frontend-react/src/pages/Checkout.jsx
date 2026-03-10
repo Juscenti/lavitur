@@ -43,6 +43,10 @@ export default function Checkout() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [discountInput, setDiscountInput] = useState('');
+  const [discountLoading, setDiscountLoading] = useState(false);
+  const [discountError, setDiscountError] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
 
   useEffect(() => {
     if (!user) {
@@ -103,12 +107,50 @@ export default function Checkout() {
     }
   }, [selectedAddressId, useNewAddress, addresses]);
 
-  const total = items.reduce((sum, i) => sum + (Number(i.price) || 0) * (i.quantity || 1), 0);
+  const subtotal = items.reduce((sum, i) => sum + (Number(i.price) || 0) * (i.quantity || 1), 0);
+  const discountAmount = appliedDiscount ? Number(appliedDiscount.discount_amount) || 0 : 0;
+  const total = Math.max(0, Number((subtotal - discountAmount).toFixed(2)));
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     setError('');
+  };
+
+  const handleApplyDiscount = async (e) => {
+    e.preventDefault();
+    setDiscountError('');
+    const code = discountInput.trim();
+    if (!code) {
+      setDiscountError('Enter a discount code.');
+      return;
+    }
+    setDiscountLoading(true);
+    try {
+      const res = await api.post('/me/discount/validate', { code, subtotal });
+      if (res.valid && res.discount_code_id) {
+        setAppliedDiscount({
+          discount_code_id: res.discount_code_id,
+          code: res.code,
+          discount_amount: res.discount_amount,
+        });
+        setDiscountError('');
+      } else {
+        setAppliedDiscount(null);
+        setDiscountError(res.message || 'Invalid or expired code.');
+      }
+    } catch (err) {
+      setAppliedDiscount(null);
+      setDiscountError(err?.message || 'Could not validate code.');
+    } finally {
+      setDiscountLoading(false);
+    }
+  };
+
+  const handleRemoveDiscount = () => {
+    setAppliedDiscount(null);
+    setDiscountInput('');
+    setDiscountError('');
   };
 
   const handleSetDefault = async (id) => {
@@ -147,6 +189,7 @@ export default function Checkout() {
         parish: form.parish?.trim() || undefined,
         postalCode: form.postalCode?.trim() || undefined,
         country: form.country?.trim() || undefined,
+        discount_code_id: appliedDiscount?.discount_code_id || undefined,
       });
       if (saveNewAddress && useNewAddress) {
         try {
@@ -484,9 +527,47 @@ export default function Checkout() {
               </li>
             ))}
           </ul>
-          <div className="checkout-total">
-            <span>Total</span>
-            <strong>{formatMoney(total)}</strong>
+
+          <section className="checkout-discount">
+            <h3 className="checkout-discount-title">Discount code</h3>
+            {appliedDiscount ? (
+              <div className="checkout-discount-applied">
+                <span className="checkout-discount-code">{appliedDiscount.code}</span>
+                <span className="checkout-discount-amount">−{formatMoney(appliedDiscount.discount_amount)}</span>
+                <button type="button" className="checkout-discount-remove" onClick={handleRemoveDiscount}>
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <form className="checkout-discount-form" onSubmit={handleApplyDiscount}>
+                <input
+                  type="text"
+                  className="checkout-discount-input"
+                  placeholder="Enter code"
+                  value={discountInput}
+                  onChange={(e) => { setDiscountInput(e.target.value.toUpperCase()); setDiscountError(''); }}
+                  disabled={discountLoading}
+                  aria-label="Discount code"
+                />
+                <button type="submit" className="checkout-discount-apply" disabled={discountLoading}>
+                  {discountLoading ? 'Checking…' : 'Apply'}
+                </button>
+              </form>
+            )}
+            {discountError && <p className="checkout-discount-error" role="alert">{discountError}</p>}
+          </section>
+
+          <div className="checkout-totals">
+            {discountAmount > 0 && (
+              <div className="checkout-total-line checkout-total-subtotal">
+                <span>Subtotal</span>
+                <span>{formatMoney(subtotal)}</span>
+              </div>
+            )}
+            <div className="checkout-total">
+              <span>Total</span>
+              <strong>{formatMoney(total)}</strong>
+            </div>
           </div>
           <button
             type="submit"

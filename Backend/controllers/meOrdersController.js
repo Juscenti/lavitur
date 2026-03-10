@@ -3,6 +3,33 @@ import { supabaseAdmin } from '../config/supabase.js';
 import { logUserActivity } from '../lib/activityLogger.js';
 
 /**
+ * Resolve and validate a discount code by id for a given subtotal. Returns { discount_code_id, discount_amount } or null.
+ */
+async function resolveDiscountForOrder(discountCodeId, subtotal) {
+  if (!discountCodeId || Number(subtotal) <= 0) return null;
+  const { data: row, error } = await supabaseAdmin
+    .from('discount_codes')
+    .select('id, discount_percent, active, starts_at, ends_at, usage_limit, used_count, min_order_total')
+    .eq('id', discountCodeId)
+    .single();
+  if (error || !row) return null;
+  if (row.active === false) return null;
+  const now = new Date().toISOString();
+  if (row.starts_at && new Date(row.starts_at) > new Date(now)) return null;
+  if (row.ends_at && new Date(row.ends_at) < new Date(now)) return null;
+  const usageLimit = row.usage_limit != null ? Number(row.usage_limit) : null;
+  if (usageLimit != null && usageLimit > 0) {
+    const used = Number(row.used_count ?? 0);
+    if (used >= usageLimit) return null;
+  }
+  const minOrder = row.min_order_total != null ? Number(row.min_order_total) : null;
+  if (minOrder != null && minOrder > 0 && subtotal < minOrder) return null;
+  const percent = Number(row.discount_percent) ?? 0;
+  const discountAmount = Number((subtotal * (percent / 100)).toFixed(2));
+  return { discount_code_id: row.id, discount_amount: discountAmount };
+}
+
+/**
  * GET current user's cart rows with product prices (same shape as meCartController for consistency).
  */
 async function getCartForOrder(userId) {
@@ -52,6 +79,7 @@ export async function createOrder(req, res) {
       parish,
       country,
       postalCode,
+      discount_code_id: bodyDiscountCodeId,
     } = req.body || {};
     if (!fullName?.trim() || !email?.trim() || !address?.trim()) {
       return res.status(400).json({ error: 'Full name, email, and address are required.' });
@@ -62,7 +90,10 @@ export async function createOrder(req, res) {
       return res.status(400).json({ error: 'Your cart is empty.' });
     }
 
-    const total = cartLines.reduce((sum, line) => sum + line.quantity * line.unit_price, 0);
+    const subtotal = cartLines.reduce((sum, line) => sum + line.quantity * line.unit_price, 0);
+    const discountApplied = await resolveDiscountForOrder(bodyDiscountCodeId || null, subtotal);
+    const discountAmount = discountApplied ? discountApplied.discount_amount : 0;
+    const total = Number((subtotal - discountAmount).toFixed(2));
     const currency = 'JMD';
 
     const shipping = {
@@ -126,6 +157,21 @@ export async function createOrder(req, res) {
       return res.status(500).json({
         error: `Order created but line items failed: ${msg}`,
       });
+    }
+
+    if (discountApplied && discountApplied.discount_code_id) {
+      const { error: redemptionError } = await supabaseAdmin.from('discount_redemptions').insert({
+        order_id: order.id,
+        discount_code_id: discountApplied.discount_code_id,
+        user_id: userId,
+        discount_amount: discountAmount,
+      });
+      if (redemptionError) console.error('discount_redemptions insert:', redemptionError);
+      else {
+        const { data: dc } = await supabaseAdmin.from('discount_codes').select('used_count').eq('id', discountApplied.discount_code_id).single();
+        const newUsed = (Number(dc?.used_count) || 0) + 1;
+        await supabaseAdmin.from('discount_codes').update({ used_count: newUsed }).eq('id', discountApplied.discount_code_id);
+      }
     }
 
     // Clear cart

@@ -15,6 +15,7 @@ import {
   removeCartItem,
 } from '../controllers/meCartController.js';
 import { createOrder, listMyOrders } from '../controllers/meOrdersController.js';
+import { validateDiscount } from '../controllers/meDiscountController.js';
 import { listMyActivity } from '../controllers/meActivityController.js';
 import {
   listAddresses,
@@ -46,6 +47,9 @@ router.delete('/cart/:id', removeCartItem);
 // Orders
 router.get('/orders', listMyOrders);
 router.post('/orders', createOrder);
+
+// Discount (validate at checkout)
+router.post('/discount/validate', validateDiscount);
 
 // Activity
 router.get('/activity', listMyActivity);

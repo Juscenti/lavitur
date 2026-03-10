@@ -127,18 +127,20 @@ function NewDiscountModal({ onClose, onCreated }) {
     <div className="promotions-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="new-discount-title">
       <div className="promotions-modal-backdrop" onClick={onClose} aria-hidden />
       <div className="promotions-modal">
-        <h2 id="new-discount-title" className="promotions-modal-title">Create discount code</h2>
-        <p className="promotions-modal-desc">
-          Define a new promotion code. Optionally assign it to an ambassador who does not yet have a code; only those ambassadors appear in the list below.
-        </p>
+        <header className="promotions-modal-header">
+          <div className="promotions-modal-header-text">
+            <h2 id="new-discount-title" className="promotions-modal-title">Create discount code</h2>
+            <p className="promotions-modal-desc">
+              Define a new promotion code. Optionally assign it to an ambassador who does not yet have a code.
+            </p>
+          </div>
+        </header>
         <form onSubmit={handleSubmit}>
           <div className="promotions-modal-body">
-            <section className="promotions-modal-section">
-              <h3 className="promotions-modal-section-title">Discount details</h3>
+            <section className="promotions-modal-section" aria-labelledby="promo-section-details">
+              <h3 id="promo-section-details" className="promotions-modal-section-title">Discount details</h3>
               <div className="form-row">
-                <label htmlFor="promo-code">
-                  Code<span className="required">*</span>
-                </label>
+                <label htmlFor="promo-code">Code<span className="required">*</span></label>
                 <input
                   id="promo-code"
                   type="text"
@@ -148,12 +150,10 @@ function NewDiscountModal({ onClose, onCreated }) {
                   autoComplete="off"
                   maxLength={32}
                 />
-                <p className="form-hint">Unique code customers enter at checkout. Letters and numbers only; no spaces.</p>
+                <p className="form-hint">Customers enter at checkout. Letters and numbers only.</p>
               </div>
               <div className="form-row">
-                <label htmlFor="promo-percent">
-                  Discount percentage<span className="required">*</span>
-                </label>
+                <label htmlFor="promo-percent">Discount %<span className="required">*</span></label>
                 <input
                   id="promo-percent"
                   type="number"
@@ -162,25 +162,20 @@ function NewDiscountModal({ onClose, onCreated }) {
                   step="0.5"
                   value={discountPercent}
                   onChange={(e) => setDiscountPercent(e.target.value)}
-                  placeholder="e.g. 15"
+                  placeholder="15"
                 />
-                <p className="form-hint">Percentage off the order (0–100).</p>
+                <p className="form-hint">0–100% off.</p>
               </div>
               <div className="form-row">
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={active}
-                    onChange={(e) => setActive(e.target.checked)}
-                  />
+                  <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
                   <span>Active immediately</span>
                 </label>
-                <p className="form-hint">Inactive codes cannot be used at checkout.</p>
               </div>
             </section>
 
-            <section className="promotions-modal-section">
-              <h3 className="promotions-modal-section-title">Validity & limits</h3>
+            <section className="promotions-modal-section" aria-labelledby="promo-section-validity">
+              <h3 id="promo-section-validity" className="promotions-modal-section-title">Validity & limits</h3>
               <div className="form-row">
                 <label htmlFor="promo-usage">Usage limit</label>
                 <input
@@ -191,36 +186,35 @@ function NewDiscountModal({ onClose, onCreated }) {
                   onChange={(e) => setUsageLimit(e.target.value)}
                   placeholder="Unlimited"
                 />
-                <p className="form-hint">Maximum number of times this code can be redeemed in total. Leave empty for unlimited.</p>
+                <p className="form-hint">Max redemptions. Empty = unlimited.</p>
               </div>
               <div className="form-row">
-                <label htmlFor="promo-starts">Start date & time</label>
+                <label htmlFor="promo-starts">Start</label>
                 <input
                   id="promo-starts"
                   type="datetime-local"
                   value={startsAt}
                   onChange={(e) => setStartsAt(e.target.value)}
                 />
-                <p className="form-hint">Code becomes valid from this moment. Optional.</p>
               </div>
               <div className="form-row">
-                <label htmlFor="promo-ends">End date & time</label>
+                <label htmlFor="promo-ends">End</label>
                 <input
                   id="promo-ends"
                   type="datetime-local"
                   value={endsAt}
                   onChange={(e) => setEndsAt(e.target.value)}
                 />
-                <p className="form-hint">After this time the code will no longer apply. Optional.</p>
+                <p className="form-hint">Optional. After this time code stops working.</p>
               </div>
             </section>
 
-            <section className="promotions-modal-section">
-              <h3 className="promotions-modal-section-title">Ambassador assignment</h3>
+            <section className="promotions-modal-section" aria-labelledby="promo-section-ambassador">
+              <h3 id="promo-section-ambassador" className="promotions-modal-section-title">Ambassador</h3>
               <div className="form-row">
-                <label htmlFor="promo-ambassador">Assign to ambassador</label>
+                <label htmlFor="promo-ambassador">Assign to</label>
                 {ambassadorsLoading ? (
-                  <p className="ambassador-loading">Loading ambassadors without a code…</p>
+                  <p className="ambassador-loading">Loading…</p>
                 ) : (
                   <>
                     <select
@@ -229,7 +223,7 @@ function NewDiscountModal({ onClose, onCreated }) {
                       onChange={(e) => setSelectedAmbassadorId(e.target.value)}
                       aria-describedby="promo-ambassador-hint"
                     >
-                      <option value="">No ambassador — general promotion</option>
+                      <option value="">No ambassador</option>
                       {ambassadorsWithoutCode.map((a) => (
                         <option key={a.id} value={a.id}>
                           {a.full_name || 'Unnamed'} {a.email ? `(${a.email})` : ''}
@@ -238,8 +232,8 @@ function NewDiscountModal({ onClose, onCreated }) {
                     </select>
                     <p id="promo-ambassador-hint" className="form-hint">
                       {ambassadorsWithoutCode.length === 0
-                        ? 'All ambassadors already have a discount code assigned.'
-                        : 'Only ambassadors without an assigned code are listed. Assigning links this code to their performance in analytics.'}
+                        ? 'All have a code already.'
+                        : 'Only those without a code are listed.'}
                     </p>
                   </>
                 )}
@@ -249,9 +243,7 @@ function NewDiscountModal({ onClose, onCreated }) {
             {error && <p className="error-inline">{error}</p>}
           </div>
           <div className="promotions-modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
-              Cancel
-            </button>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn btn-primary" disabled={submitting}>
               {submitting ? 'Creating…' : 'Create discount'}
             </button>
