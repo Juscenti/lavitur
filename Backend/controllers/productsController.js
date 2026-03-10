@@ -340,7 +340,8 @@ export async function updateProductStatus(req, res) {
   }
 }
 
-/** Admin: delete product. Requires confirm=DELETE in query or body. Removes categories + media first, then product. */
+/** Admin: delete product. Requires confirm=DELETE in query or body. Removes categories + media first, then product.
+ *  Uses user JWT for all deletes so RLS (auth.uid()) is satisfied — same pattern as createProduct/updateProduct. */
 export async function deleteProduct(req, res) {
   try {
     const { id } = req.params;
@@ -351,10 +352,11 @@ export async function deleteProduct(req, res) {
       });
     }
 
+    const supabase = supabaseWithUserToken(req.headers.authorization);
+
     // Remove colour variants (cascades SET NULL on product_media.color_variant_id).
-    // Run in its own try/catch so a missing table never aborts the rest of the cleanup.
     try {
-      const { error: cvErr } = await supabaseAdmin
+      const { error: cvErr } = await supabase
         .from('product_color_variants')
         .delete()
         .eq('product_id', id);
@@ -363,15 +365,12 @@ export async function deleteProduct(req, res) {
       console.warn('deleteProduct: color_variants cleanup threw:', cvCaughtErr?.message);
     }
 
-    const { error: catErr } = await supabaseAdmin.from('product_categories').delete().eq('product_id', id);
+    const { error: catErr } = await supabase.from('product_categories').delete().eq('product_id', id);
     if (catErr) console.error('deleteProduct: product_categories cleanup error:', catErr.message);
 
-    const { error: mediaErr } = await supabaseAdmin.from('product_media').delete().eq('product_id', id);
+    const { error: mediaErr } = await supabase.from('product_media').delete().eq('product_id', id);
     if (mediaErr) console.error('deleteProduct: product_media cleanup error:', mediaErr.message);
 
-    // Use user JWT so DB triggers see auth.uid() — same as create/update.
-    // supabaseWithUserToken falls back to supabaseAdmin if no token is present.
-    const supabase = supabaseWithUserToken(req.headers.authorization);
     const { data: deleted, error } = await supabase
       .from('products')
       .delete()
@@ -495,8 +494,9 @@ export async function reassignMediaColor(req, res) {
   try {
     const { id: productId, mediaId } = req.params;
     const { color_variant_id } = req.body;
+    const supabase = supabaseWithUserToken(req.headers.authorization);
 
-    const { error } = await supabaseAdmin
+    const { error } = await supabase
       .from('product_media')
       .update({ color_variant_id: color_variant_id || null })
       .eq('id', mediaId)

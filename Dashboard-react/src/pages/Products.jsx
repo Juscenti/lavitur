@@ -439,6 +439,28 @@ export default function Products() {
     }
   };
 
+  /** Add files to a queued (temp) colour variant when adding a new product — so user can assign images before save. */
+  const handleAddTempVariantFiles = (variant, files) => {
+    if (!files?.length || !variant._tempId) return;
+    const list = Array.from(files);
+    setColorVariants((prev) =>
+      prev.map((vv) =>
+        vv._tempId === variant._tempId ? { ...vv, files: [...(vv.files || []), ...list] } : vv
+      )
+    );
+  };
+
+  const removeTempVariantFile = (variant, index) => {
+    setColorVariants((prev) =>
+      prev.map((vv) => {
+        if (vv._tempId !== variant._tempId || !Array.isArray(vv.files)) return vv;
+        const next = [...vv.files];
+        next.splice(index, 1);
+        return { ...vv, files: next };
+      })
+    );
+  };
+
   const openDeleteModal = (prod) => {
     setProductToDelete(prod);
     setDeleteModalOpen(true);
@@ -898,18 +920,43 @@ export default function Products() {
                             </label>
                           </div>
                         )}
-                        {/* Pending files preview — new product mode */}
-                        {!v.id && Array.isArray(v.files) && v.files.length > 0 && (
+                        {/* Pending files preview — new product mode: queue images before save */}
+                        {!v.id && (
                           <div className="pvariant-images">
-                            {v.files.map((f, fi) => (
-                              <div key={fi} className="pvariant-image-thumb">
-                                <img src={URL.createObjectURL(f)} alt={`preview ${fi}`} />
-                              </div>
-                            ))}
+                            {Array.isArray(v.files) &&
+                              v.files.length > 0 &&
+                              v.files.map((f, fi) => (
+                                <div key={fi} className="pvariant-image-thumb">
+                                  <img src={URL.createObjectURL(f)} alt={`preview ${fi}`} />
+                                  <button
+                                    type="button"
+                                    className="pvariant-image-remove"
+                                    onClick={() => removeTempVariantFile(v, fi)}
+                                    title="Remove"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            <label className="pvariant-upload-btn" title="Add images for this colour">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                style={{ display: 'none' }}
+                                onChange={(e) => {
+                                  handleAddTempVariantFiles(v, e.target.files);
+                                  e.target.value = '';
+                                }}
+                              />
+                              <span>+ Add</span>
+                            </label>
                           </div>
                         )}
                         {!v.id && (!v.files || v.files.length === 0) && (
-                          <p className="pfield-hint" style={{ marginTop: 4 }}>No images queued — add them after saving.</p>
+                          <p className="pfield-hint" style={{ marginTop: 4 }}>
+                            No images queued — use + Add to assign photos to this colour before saving.
+                          </p>
                         )}
                       </div>
                     ))}
