@@ -42,3 +42,9 @@ CREATE TRIGGER trg_content_blocks_updated_at
 BEFORE UPDATE ON content_blocks
 FOR EACH ROW EXECUTE FUNCTION set_content_blocks_updated_at();
 
+-- ============================================================
+-- Storage bucket for content block images (media_url)
+-- Create in Supabase Dashboard: Storage -> New bucket -> name: content-blocks
+-- Set bucket to Public so the API can return public URLs for uploaded images.
+-- The backend uploads files to paths like: {uuid}-{filename}
+-- ============================================================

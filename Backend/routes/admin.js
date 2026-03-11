@@ -81,8 +81,14 @@ router.post('/discounts', adminDiscounts.createDiscount);
 router.patch('/discounts/:id', adminDiscounts.updateDiscount);
 router.patch('/discounts/:id/active', adminDiscounts.updateDiscountActive);
 
-// Content
+// Content (literal routes before :id)
 router.get('/content-blocks', adminContent.listContentBlocks);
+router.post('/content-blocks', adminContent.createContentBlock);
+router.patch('/content-blocks/reorder', adminContent.reorderContentBlocks);
+router.post('/content-blocks/upload-image', upload.single('file'), adminContent.uploadContentImage);
+router.get('/content-blocks/:id', adminContent.getContentBlock);
+router.patch('/content-blocks/:id', adminContent.updateContentBlock);
+router.delete('/content-blocks/:id', adminContent.deleteContentBlock);
 
 // Support
 router.get('/support/tickets', adminSupport.listTickets);

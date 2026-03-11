@@ -34,3 +34,10 @@ export function getProductMediaPublicUrl(filePath) {
   const base = (url || '').replace(/\/$/, '');
   return `${base}/storage/v1/object/public/product-media/${filePath}`;
 }
+
+/** Public URL for content block media (content-blocks bucket) */
+export function getContentBlockMediaPublicUrl(filePath) {
+  if (!filePath) return '';
+  const base = (url || '').replace(/\/$/, '');
+  return `${base}/storage/v1/object/public/content-blocks/${filePath}`;
+}
