@@ -28,7 +28,7 @@ function HeroBlock({ block }) {
   const [index, setIndex] = useState(1);
   const [noTransition, setNoTransition] = useState(false);
   const parsed = parseBodyJson(block.body);
-  const tagline = parsed?.tagline ?? (block.body || '').trim() || null;
+  const tagline = parsed?.tagline ?? ((block.body || '').trim() || null);
   const slideUrls = Array.isArray(parsed?.slides) && parsed.slides.length > 0
     ? parsed.slides
     : (block.media_url ? [block.media_url] : []);

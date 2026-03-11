@@ -55,7 +55,7 @@ export async function getContentBlock(req, res) {
 export async function createContentBlock(req, res) {
   try {
     const userId = req.userId;
-    const { slug, title, type, body, media_url, cta_label, cta_url, is_active, sort_order } = req.body || {};
+    const { slug, title, type, body, media_url, cta_label, cta_url, is_active, sort_order, page } = req.body || {};
 
     if (!slug || !title || !type) {
       return res.status(400).json({ error: 'slug, title, and type are required' });
