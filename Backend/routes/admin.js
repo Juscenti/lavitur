@@ -94,6 +94,10 @@ router.delete('/content-blocks/:id', adminContent.deleteContentBlock);
 
 // Support
 router.get('/support/tickets', adminSupport.listTickets);
+router.get('/support/team', adminSupport.getSupportTeam);
+router.get('/support/tickets/:id', adminSupport.getTicket);
+router.patch('/support/tickets/:id', adminSupport.updateTicket);
+router.post('/support/tickets/:id/messages', adminSupport.addMessage);
 
 // Analytics
 router.get('/analytics/overview', adminAnalytics.getOverview);

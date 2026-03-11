@@ -60,30 +60,26 @@ function SortableRow({ item, onEdit, onDelete }) {
 
   return (
     <tr ref={setNodeRef} style={style} className={isDragging ? 'content-table-row--dragging' : ''}>
-      <td className="content-table-cell-drag">
+      <td className="content-page-td-drag">
         <span className="content-drag-handle" {...attributes} {...listeners} aria-label="Drag to reorder">
           ⋮⋮
         </span>
       </td>
-      <td className="content-table-cell-thumb">
+      <td className="content-page-td-thumb">
         {item.media_url ? (
           <img src={item.media_url} alt="" className="content-thumb" />
         ) : (
           <span className="content-thumb-placeholder">—</span>
         )}
       </td>
-      <td>{item.type}</td>
-      <td>{item.slug}</td>
-      <td>{item.title}</td>
-      <td>{item.is_active ? 'Yes' : 'No'}</td>
+      <td><span className="content-type-badge">{item.type}</span></td>
+      <td><code className="content-slug">{item.slug}</code></td>
+      <td><strong className="content-title-cell">{item.title}</strong></td>
+      <td><span className={`content-active-pill ${item.is_active ? 'content-active-pill--on' : ''}`}>{item.is_active ? 'Active' : 'Off'}</span></td>
       <td>{item.updated_at ? new Date(item.updated_at).toLocaleString() : '—'}</td>
-      <td className="content-table-cell-actions">
-        <button type="button" className="btn btn-small" onClick={() => onEdit(item)}>
-          Edit
-        </button>
-        <button type="button" className="btn btn-small btn-danger" onClick={() => onDelete(item)}>
-          Delete
-        </button>
+      <td className="content-page-actions">
+        <button type="button" className="btn btn-small content-btn-edit" onClick={() => onEdit(item)}>Edit</button>
+        <button type="button" className="btn btn-small btn-danger content-btn-delete" onClick={() => onDelete(item)}>Delete</button>
       </td>
     </tr>
   );
@@ -423,20 +419,20 @@ export default function Content() {
   };
 
   return (
-    <section className="panel">
-      <header className="panel-header">
-        <div>
+    <section className="panel content-page">
+      <header className="content-page-header">
+        <div className="content-page-header-text">
           <h1>Content Management</h1>
-          <p className="panel-subtitle">
+          <p className="content-page-subtitle">
             Hero banners, homepage sections, FAQs and other reusable content blocks.
           </p>
         </div>
-        <button type="button" className="btn primary" onClick={openCreate}>
+        <button type="button" className="btn primary content-page-cta" onClick={openCreate}>
           + New block
         </button>
       </header>
 
-      <div className="panel-filters">
+      <div className="content-page-filters">
         <label>
           Type
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
@@ -462,19 +458,19 @@ export default function Content() {
       <Status loading={loading} error={error} />
 
       {!loading && !error && (
-        <div className="table-wrapper content-table-wrapper">
+        <div className="content-page-table-wrap">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <table className="data-table content-table">
+            <table className="content-page-table">
               <thead>
                 <tr>
-                  <th className="content-table-cell-drag" aria-label="Reorder" />
-                  <th className="content-table-cell-thumb">Image</th>
+                  <th className="content-page-th-drag" aria-label="Reorder" />
+                  <th className="content-page-th-thumb">Image</th>
                   <th>Type</th>
                   <th>Slug</th>
                   <th>Title</th>
                   <th>Active</th>
                   <th>Last updated</th>
-                  <th className="content-table-cell-actions">Actions</th>
+                  <th className="content-page-th-actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
