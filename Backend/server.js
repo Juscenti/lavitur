@@ -11,6 +11,7 @@ import cors from 'cors';
 
 import categoriesRoutes from './routes/categories.js';
 import productsRoutes from './routes/products.js';
+import contentBlocksRoutes from './routes/contentBlocks.js';
 import meRoutes from './routes/me.js';
 import adminRoutes from './routes/admin.js';
 
@@ -48,6 +49,7 @@ app.get('/api/auth-status', (req, res) =>
 
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/products', productsRoutes);
+app.use('/api/content-blocks', contentBlocksRoutes);
 
 // Authenticated user (Bearer = Supabase access_token)
 app.use('/api/me', meRoutes);

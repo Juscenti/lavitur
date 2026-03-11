@@ -25,8 +25,17 @@ const BLOCK_TYPES = [
   { value: 'hero', label: 'Hero' },
   { value: 'homepage_section', label: 'Homepage section' },
   { value: 'banner', label: 'Banner' },
+  { value: 'collections', label: 'Collections' },
+  { value: 'split', label: 'Split (e.g. Women / Men)' },
+  { value: 'top_picks', label: 'Top Picks heading' },
+  { value: 'newsletter', label: 'Newsletter' },
   { value: 'faq', label: 'FAQ' },
   { value: 'guide', label: 'Guide' },
+];
+
+const BLOCK_PAGES = [
+  { value: '', label: 'Any / Global' },
+  { value: 'home', label: 'Home' },
 ];
 
 function slugify(text) {
@@ -96,6 +105,7 @@ export default function Content() {
   const [formCtaLabel, setFormCtaLabel] = useState('');
   const [formCtaUrl, setFormCtaUrl] = useState('');
   const [formActive, setFormActive] = useState(true);
+  const [formPage, setFormPage] = useState('');
   const [formSortOrder, setFormSortOrder] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -145,6 +155,7 @@ export default function Content() {
     setFormCtaLabel('');
     setFormCtaUrl('');
     setFormActive(true);
+    setFormPage('');
     setFormSortOrder('');
     setFormError('');
     setModalOpen(true);
@@ -164,6 +175,7 @@ export default function Content() {
         setFormCtaLabel(block.cta_label || '');
         setFormCtaUrl(block.cta_url || '');
         setFormActive(block.is_active !== false);
+        setFormPage(block.page != null ? String(block.page) : '');
         setFormSortOrder(block.sort_order != null ? String(block.sort_order) : '');
       })
       .catch((err) => setFormError(err?.message || 'Failed to load block'));
@@ -232,6 +244,7 @@ export default function Content() {
         cta_url: formCtaUrl.trim() || null,
         is_active: formActive,
         sort_order: formSortOrder.trim() && Number.isFinite(Number(formSortOrder)) ? parseInt(formSortOrder, 10) : undefined,
+        page: formPage.trim() || null,
       };
       if (editingId) {
         await updateContentBlock(editingId, payload);
@@ -482,6 +495,21 @@ export default function Content() {
                     />
                     <span>Active</span>
                   </label>
+                </div>
+                <div className="content-form-row">
+                  <label htmlFor="content-page">Page</label>
+                  <select
+                    id="content-page"
+                    value={formPage}
+                    onChange={(e) => setFormPage(e.target.value)}
+                  >
+                    {BLOCK_PAGES.map((p) => (
+                      <option key={p.value || 'any'} value={p.value}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="content-form-hint">e.g. Home = show on frontend home page.</span>
                 </div>
                 <div className="content-form-row">
                   <label htmlFor="content-sort">Sort order</label>

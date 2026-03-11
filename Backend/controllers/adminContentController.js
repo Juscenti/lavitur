@@ -10,7 +10,7 @@ export async function listContentBlocks(req, res) {
 
     let query = supabaseAdmin
       .from('content_blocks')
-      .select('id, slug, title, type, media_url, is_active, sort_order, updated_at')
+      .select('id, slug, title, type, media_url, is_active, sort_order, page, updated_at')
       .order('sort_order', { ascending: true })
       .order('updated_at', { ascending: false });
 
@@ -82,6 +82,7 @@ export async function createContentBlock(req, res) {
       cta_url: cta_url != null ? String(cta_url).trim() || null : null,
       is_active: is_active !== false,
       sort_order: order,
+      page: page != null && String(page).trim() ? String(page).trim() : null,
       created_by: userId,
       updated_by: userId,
     };
@@ -102,7 +103,7 @@ export async function updateContentBlock(req, res) {
   try {
     const { id } = req.params;
     const userId = req.userId;
-    const { slug, title, type, body, media_url, cta_label, cta_url, is_active, sort_order } = req.body || {};
+    const { slug, title, type, body, media_url, cta_label, cta_url, is_active, sort_order, page } = req.body || {};
 
     if (!slug || !title || !type) {
       return res.status(400).json({ error: 'slug, title, and type are required' });
@@ -120,6 +121,7 @@ export async function updateContentBlock(req, res) {
       updated_by: userId,
     };
     if (typeof sort_order === 'number') payload.sort_order = sort_order;
+    payload.page = page != null && String(page).trim() ? String(page).trim() : null;
 
     const { data, error } = await supabaseAdmin
       .from('content_blocks')

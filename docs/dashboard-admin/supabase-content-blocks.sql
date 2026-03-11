@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS content_blocks (
   cta_url TEXT,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   sort_order INTEGER NOT NULL DEFAULT 0,
+  page TEXT,                  -- e.g. 'home' for home page; null = global
   created_by UUID REFERENCES profiles(id),
   updated_by UUID REFERENCES profiles(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

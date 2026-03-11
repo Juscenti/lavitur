@@ -6,4 +6,7 @@ export default defineConfig({
   server: {
     port: 3002,
   },
+  optimizeDeps: {
+    include: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+  },
 });
