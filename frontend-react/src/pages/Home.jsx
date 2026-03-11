@@ -101,16 +101,19 @@ function SectionBlock({ block }) {
 
 // —— Banner / Video hero ——
 function BannerBlock({ block }) {
-  const isVideo = block.media_url && /\.(mp4|webm|ogg)(\?|$)/i.test(block.media_url);
+  const url = block.media_url || '';
+  const isVideo = url && (/\.(mp4|webm|ogg)(\?|$)/i.test(url) || /^data:video\//i.test(url));
+  const ext = url.split('.').pop()?.split('?')[0]?.toLowerCase();
+  const videoType = ext === 'webm' ? 'video/webm' : ext === 'ogg' ? 'video/ogg' : 'video/mp4';
   return (
     <section className="video-hero">
-      {block.media_url && (
+      {url && (
         isVideo ? (
-          <video autoPlay muted loop playsInline>
-            <source src={block.media_url} type="video/mp4" />
+          <video autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}>
+            <source src={url} type={videoType} />
           </video>
         ) : (
-          <img src={block.media_url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
         )
       )}
       <div className="video-overlay">
@@ -128,15 +131,15 @@ function BannerBlock({ block }) {
 function CollectionsBlock({ block }) {
   const items = parseBodyJson(block.body);
   const list = Array.isArray(items) ? items : [];
-  if (list.length === 0) return null;
+  const valid = list.filter((c) => c && (c.slug || c.label || c.img));
   return (
     <section id="collections" className="collections">
       {block.title && <h2>{block.title}</h2>}
       <div className="grid" id="collection-grid">
-        {list.map((c) => (
-          <Link key={c.slug || c.label || c.img} to={c.url || `/shop?category=${c.slug || ''}`} className="collection-box" data-category={c.slug}>
+        {valid.map((c, i) => (
+          <Link key={c.slug || c.label || c.img || i} to={c.url || `/shop?category=${c.slug || ''}`} className="collection-box" data-category={c.slug}>
             {c.img && <img src={c.img} alt={c.label || ''} />}
-            {c.label && <span className="collection-label">{c.label}</span>}
+            <span className="collection-label">{c.label || c.slug || 'Collection'}</span>
           </Link>
         ))}
       </div>
@@ -148,13 +151,13 @@ function CollectionsBlock({ block }) {
 function SplitBlock({ block }) {
   const items = parseBodyJson(block.body);
   const list = Array.isArray(items) ? items : [];
-  if (list.length === 0) return null;
+  const valid = list.filter((t) => t && (t.img || t.label || t.url));
   return (
     <section className="index-split">
-      {list.map((tile, i) => (
+      {valid.map((tile, i) => (
         <Link key={i} to={tile.url || '#'} className="index-split-tile">
           {tile.img && <img src={tile.img} alt={tile.label || ''} />}
-          {tile.label && <span className="index-split-label">{tile.label}</span>}
+          {(tile.label || tile.url) && <span className="index-split-label">{tile.label || 'Link'}</span>}
         </Link>
       ))}
     </section>

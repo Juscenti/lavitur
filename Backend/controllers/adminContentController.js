@@ -173,16 +173,23 @@ export async function reorderContentBlocks(req, res) {
   }
 }
 
+const ALLOWED_MEDIA_TYPES = /^(image\/|video\/)/;
+
 export async function uploadContentImage(req, res) {
   try {
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'No file uploaded' });
 
-    const safeName = (file.originalname || 'image').replace(/\s+/g, '-');
+    if (!ALLOWED_MEDIA_TYPES.test(file.mimetype || '')) {
+      return res.status(400).json({ error: 'File must be an image or video (e.g. mp4, webm)' });
+    }
+
+    const safeName = (file.originalname || 'media').replace(/\s+/g, '-');
     const filePath = `${crypto.randomUUID()}-${safeName}`;
+    const contentType = file.mimetype || 'application/octet-stream';
 
     const { error: upErr } = await supabaseAdmin.storage.from(CONTENT_BUCKET).upload(filePath, file.buffer, {
-      contentType: file.mimetype || 'image/jpeg',
+      contentType,
       upsert: false,
     });
 
@@ -192,7 +199,7 @@ export async function uploadContentImage(req, res) {
     res.json({ url: publicUrl });
   } catch (err) {
     console.error('uploadContentImage:', err);
-    res.status(500).json({ error: err.message || 'Failed to upload image' });
+    res.status(500).json({ error: err.message || 'Failed to upload' });
   }
 }
 

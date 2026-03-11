@@ -53,6 +53,8 @@ router.delete('/products/:id', deleteProduct);
 
 // Product media (multer memory storage for multipart)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+// Content blocks: images + video (e.g. banner mp4), larger limit
+const contentUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 60 * 1024 * 1024 } });
 router.get('/products/:id/media', listProductMedia);
 router.post('/products/:id/media', upload.array('files', 10), uploadProductMedia);
 router.delete('/products/:id/media/:mediaId', deleteProductMedia);
@@ -85,7 +87,7 @@ router.patch('/discounts/:id/active', adminDiscounts.updateDiscountActive);
 router.get('/content-blocks', adminContent.listContentBlocks);
 router.post('/content-blocks', adminContent.createContentBlock);
 router.patch('/content-blocks/reorder', adminContent.reorderContentBlocks);
-router.post('/content-blocks/upload-image', upload.single('file'), adminContent.uploadContentImage);
+router.post('/content-blocks/upload-image', contentUpload.single('file'), adminContent.uploadContentImage);
 router.get('/content-blocks/:id', adminContent.getContentBlock);
 router.patch('/content-blocks/:id', adminContent.updateContentBlock);
 router.delete('/content-blocks/:id', adminContent.deleteContentBlock);
