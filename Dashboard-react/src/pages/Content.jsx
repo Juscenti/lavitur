@@ -97,6 +97,7 @@ function SortableRow({ item, onEdit, onDelete }) {
 export default function Content() {
   const [items, setItems] = useState([]);
   const [typeFilter, setTypeFilter] = useState('');
+  const [pageFilter, setPageFilter] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -170,9 +171,10 @@ export default function Content() {
     const oldIndex = items.findIndex((i) => i.id === active.id);
     const newIndex = items.findIndex((i) => i.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
-    const newOrder = arrayMove(items, oldIndex, newIndex).map((i) => i.id);
+    const reordered = arrayMove(items, oldIndex, newIndex);
+    const newOrder = reordered.map((i) => i.id);
     reorderContentBlocks(newOrder)
-      .then(() => setItems((prev) => arrayMove(prev, oldIndex, newIndex)))
+      .then(() => setItems(reordered))
       .catch((err) => setError(err?.message || 'Failed to reorder'));
   };
 
@@ -430,11 +432,12 @@ export default function Content() {
     setDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = async () => {
-    if (!blockToDelete) return;
+  const handleConfirmDelete = async (payload) => {
+    const block = payload ?? blockToDelete;
+    if (!block) return;
     setDeleting(true);
     try {
-      await deleteContentBlock(blockToDelete.id);
+      await deleteContentBlock(block.id);
       setDeleteModalOpen(false);
       setBlockToDelete(null);
       fetchList();
@@ -444,6 +447,10 @@ export default function Content() {
       setDeleting(false);
     }
   };
+
+  const filteredItems = pageFilter
+    ? items.filter((b) => (pageFilter === 'any' ? !b.page : b.page === pageFilter))
+    : items;
 
   const getVariantOptionsForPage = (pageKey) => {
     const opts = new Set(['default']);
@@ -479,27 +486,6 @@ export default function Content() {
         </button>
       </header>
 
-      <div className="content-active-variants">
-        <h3 className="content-active-variants-title">Active variant (what the site shows)</h3>
-        <p className="content-active-variants-desc">Choose which version of each page is live. Blocks with a matching variant (or no variant) are shown.</p>
-        <div className="content-active-variants-grid">
-          {CONTENT_PAGES.map(({ value: pageKey, label }) => (
-            <label key={pageKey} className="content-active-variants-item">
-              <span className="content-active-variants-label">{label}</span>
-              <select
-                value={activeVariants[pageKey] ?? 'default'}
-                onChange={(e) => setActiveVariantForPage(pageKey, e.target.value)}
-                disabled={settingsLoading}
-              >
-                {getVariantOptionsForPage(pageKey).map((v) => (
-                  <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
-            </label>
-          ))}
-        </div>
-      </div>
-
       <div className="content-page-filters">
         <label>
           Type
@@ -513,6 +499,15 @@ export default function Content() {
           </select>
         </label>
         <label>
+          Page
+          <select value={pageFilter} onChange={(e) => setPageFilter(e.target.value)}>
+            <option value="">All</option>
+            <option value="home">Home</option>
+            <option value="shop">Shop</option>
+            <option value="any">Any / Global</option>
+          </select>
+        </label>
+        <label>
           Search
           <input
             type="search"
@@ -521,6 +516,24 @@ export default function Content() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </label>
+        <div className="content-page-filters-variants">
+          <span className="content-page-filters-variants-label">Live variant</span>
+          {CONTENT_PAGES.map(({ value: pageKey, label }) => (
+            <label key={pageKey} className="content-page-filters-variant-item">
+              <span>{label}</span>
+              <select
+                value={activeVariants[pageKey] ?? 'default'}
+                onChange={(e) => setActiveVariantForPage(pageKey, e.target.value)}
+                disabled={settingsLoading}
+                title="Which variant is shown on the site for this page"
+              >
+                {getVariantOptionsForPage(pageKey).map((v) => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
       </div>
 
       <Status loading={loading} error={error} />
@@ -544,15 +557,15 @@ export default function Content() {
                 </tr>
               </thead>
               <tbody>
-                {items.length === 0 ? (
+                {filteredItems.length === 0 ? (
                   <tr>
                     <td colSpan={10} style={{ textAlign: 'center' }}>
                       No content blocks found.
                     </td>
                   </tr>
                 ) : (
-                  <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-                    {items.map((item) => (
+                  <SortableContext items={filteredItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+                    {filteredItems.map((item) => (
                       <SortableRow
                         key={item.id}
                         item={item}
